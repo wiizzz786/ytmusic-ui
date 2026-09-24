@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YT Music - Standalone & Vercel</title>
+  <title>YT Music - Web & Standalone</title>
   <!-- Google Fonts & Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -627,7 +627,7 @@
       <div class="nav-item active" onclick="loadHome()"><i class="fa-solid fa-house"></i> Home</div>
       <div class="nav-item" onclick="loadCharts()"><i class="fa-solid fa-chart-line"></i> Charts</div>
       <div class="nav-item" onclick="loadExplore()"><i class="fa-solid fa-compass"></i> Explore</div>
-      <div class="nav-item" onclick="loadCategory('Top Hits 2026', CURATED_DATA.quickPicks)"><i class="fa-solid fa-fire"></i> Top Hits</div>
+      <div class="nav-item" onclick="loadCategory('Top Hits', CURATED_DATA.quickPicks)"><i class="fa-solid fa-fire"></i> Top Hits</div>
     </div>
 
     <!-- Main Section -->
@@ -635,7 +635,7 @@
       <div class="top-bar">
         <div class="search-box">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="search-input" placeholder="Search 50+ songs, artists, albums..." onkeypress="handleSearchKey(event)">
+          <input type="text" id="search-input" placeholder="Search millions of songs, artists, albums..." onkeypress="handleSearchKey(event)">
         </div>
         <div class="filter-chips">
           <div class="chip active" onclick="setFilter(this, 'all')">All</div>
@@ -696,7 +696,6 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
-    // Detect API Base URL (works locally, on Vercel, or file://)
     const API_BASE = (window.location.protocol === 'file:' || !window.location.port) 
       ? 'http://127.0.0.1:5000' 
       : window.location.origin;
@@ -716,7 +715,7 @@
     const durTime = document.getElementById('dur-time');
     const progressContainer = document.getElementById('progress-container');
 
-    // Rich 50+ Song Catalog for Standalone Mode
+    // Rich Catalog for Standalone Mode
     const CURATED_DATA = {
       quickPicks: [
         { videoId: 'xLR3SaA0xTY', title: 'Viva La Vida', artist: 'Coldplay', thumb: 'https://i.ytimg.com/vi/xLR3SaA0xTY/hqdefault.jpg' },
@@ -937,7 +936,7 @@
         const items = shelf.contents || shelf.items || [];
         if (items.length === 0) return;
 
-        html += `<div class="section-header"><h2 class="section-title">${title}</h2></div><div class="horizontal-shelf">`;
+        html += `<div class="section-header"><h2 class="section-title">${title} (${items.length} items)</h2></div><div class="horizontal-shelf">`;
         items.forEach(item => {
           const title = item.title || 'Track';
           const subtitle = item.artists ? item.artists.map(a => a.name).join(', ') : (item.author || '');
@@ -968,9 +967,9 @@
     }
 
     function renderCuratedHome() {
-      let html = `<div class="section-header"><h2 class="section-title">Quick Picks</h2></div><div class="horizontal-shelf">`;
+      let html = `<div class="section-header"><h2 class="section-title">Quick Picks (${CURATED_DATA.quickPicks.length} tracks)</h2></div><div class="horizontal-shelf">`;
       CURATED_DATA.quickPicks.forEach(item => { html += renderCard(item); });
-      html += `</div><div class="section-header"><h2 class="section-title">Trending Hits</h2></div><div class="horizontal-shelf">`;
+      html += `</div><div class="section-header"><h2 class="section-title">Trending Hits (${CURATED_DATA.trending.length} tracks)</h2></div><div class="horizontal-shelf">`;
       CURATED_DATA.trending.forEach(item => { html += renderCard(item); });
       html += `</div>`;
       document.getElementById('dynamic-content').innerHTML = html;
@@ -1054,7 +1053,7 @@
           const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`);
           const data = await res.json();
           if (data.status === 'success' && data.data) {
-            let html = `<h2 class="section-title" style="margin-bottom: 20px;">Results for "${q}" (${data.data.length} tracks)</h2><div class="track-list">`;
+            let html = `<h2 class="section-title" style="margin-bottom: 20px;">All Results for "${q}" (${data.data.length} items)</h2><div class="track-list">`;
             data.data.forEach(item => {
               if (item.videoId) {
                 const title = item.title;
