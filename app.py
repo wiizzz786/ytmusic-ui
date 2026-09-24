@@ -24,10 +24,8 @@ import yt_dlp
 app = Flask(__name__, static_folder='.')
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Initialize YouTube Music API client
 ytmusic = YTMusic()
 
-# Temporary download directory
 DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), 'ytmusic_downloads')
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
@@ -49,13 +47,13 @@ def serve_index():
 
 @app.route('/api/home', methods=['GET'])
 def get_home():
-    """Fetch home feed recommendations and shelves."""
+    """Fetch rich home feed recommendations and shelves."""
     try:
-        home_data = ytmusic.get_home(limit=6)
+        home_data = ytmusic.get_home(limit=25)
         return jsonify({"status": "success", "data": home_data})
     except Exception as err:
         try:
-            results = ytmusic.search("Top Hits 2026", limit=20)
+            results = ytmusic.search("Top Hits 2026", limit=50)
             fallback_data = [{
                 "title": "Top Trending Hits",
                 "contents": results
@@ -67,14 +65,14 @@ def get_home():
 
 @app.route('/api/search', methods=['GET'])
 def search():
-    """Search songs, albums, artists, or playlists."""
+    """Search songs, albums, artists, or playlists with high item limits."""
     query = request.args.get('q', 'trending').strip()
     filter_type = request.args.get('filter', None)
     if filter_type == 'all':
         filter_type = None
 
     try:
-        results = ytmusic.search(query, filter=filter_type, limit=30)
+        results = ytmusic.search(query, filter=filter_type, limit=50)
         return jsonify({"status": "success", "query": query, "data": results})
     except Exception as err:
         return jsonify({"status": "error", "message": str(err)}), 500
@@ -82,7 +80,7 @@ def search():
 
 @app.route('/api/charts', methods=['GET'])
 def get_charts():
-    """Fetch top music charts."""
+    """Fetch complete top music charts."""
     country = request.args.get('country', 'US').upper()
     try:
         charts = ytmusic.get_charts(country=country)
@@ -93,9 +91,9 @@ def get_charts():
 
 @app.route('/api/playlist/<path:playlist_id>', methods=['GET'])
 def get_playlist(playlist_id):
-    """Fetch playlist tracklist and metadata."""
+    """Fetch full playlist tracklist and metadata."""
     try:
-        playlist = ytmusic.get_playlist(playlist_id, limit=50)
+        playlist = ytmusic.get_playlist(playlist_id, limit=100)
         return jsonify({"status": "success", "data": playlist})
     except Exception as err:
         return jsonify({"status": "error", "message": str(err)}), 500
@@ -103,7 +101,7 @@ def get_playlist(playlist_id):
 
 @app.route('/api/album/<path:album_id>', methods=['GET'])
 def get_album(album_id):
-    """Fetch album tracks and metadata."""
+    """Fetch full album tracks and metadata."""
     try:
         album = ytmusic.get_album(album_id)
         return jsonify({"status": "success", "data": album})

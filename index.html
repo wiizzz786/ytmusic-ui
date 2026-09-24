@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YT Music - Web & Standalone</title>
+  <title>YT Music - Standalone & Vercel</title>
   <!-- Google Fonts & Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -466,7 +466,7 @@
       transform: scale(0.95);
     }
 
-    /* Progress Scrubber Container & Animated White Loading Knob */
+    /* Scrubber Bar & Animated White Knob */
     .progress-container {
       display: flex;
       align-items: center;
@@ -510,7 +510,6 @@
       transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    /* White Loading Spinner Ring for Scrubber Dot */
     .white-spinner {
       width: 16px;
       height: 16px;
@@ -628,7 +627,7 @@
       <div class="nav-item active" onclick="loadHome()"><i class="fa-solid fa-house"></i> Home</div>
       <div class="nav-item" onclick="loadCharts()"><i class="fa-solid fa-chart-line"></i> Charts</div>
       <div class="nav-item" onclick="loadExplore()"><i class="fa-solid fa-compass"></i> Explore</div>
-      <div class="nav-item" onclick="loadSearch('Top Hits 2026')"><i class="fa-solid fa-fire"></i> Top Hits</div>
+      <div class="nav-item" onclick="loadCategory('Top Hits 2026', CURATED_DATA.quickPicks)"><i class="fa-solid fa-fire"></i> Top Hits</div>
     </div>
 
     <!-- Main Section -->
@@ -636,7 +635,7 @@
       <div class="top-bar">
         <div class="search-box">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="search-input" placeholder="Search songs, albums, artists..." onkeypress="handleSearchKey(event)">
+          <input type="text" id="search-input" placeholder="Search 50+ songs, artists, albums..." onkeypress="handleSearchKey(event)">
         </div>
         <div class="filter-chips">
           <div class="chip active" onclick="setFilter(this, 'all')">All</div>
@@ -653,10 +652,9 @@
     </div>
   </div>
 
-  <!-- HTML5 Audio element for stream proxy -->
   <audio id="native-audio" style="display:none;"></audio>
 
-  <!-- YouTube Video Iframe Engine -->
+  <!-- YouTube Video Engine -->
   <div id="player-frame-container">
     <div id="yt-player"></div>
   </div>
@@ -698,6 +696,7 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
+    // Detect API Base URL (works locally, on Vercel, or file://)
     const API_BASE = (window.location.protocol === 'file:' || !window.location.port) 
       ? 'http://127.0.0.1:5000' 
       : window.location.origin;
@@ -717,7 +716,7 @@
     const durTime = document.getElementById('dur-time');
     const progressContainer = document.getElementById('progress-container');
 
-    // Standalone fallback catalog
+    // Rich 50+ Song Catalog for Standalone Mode
     const CURATED_DATA = {
       quickPicks: [
         { videoId: 'xLR3SaA0xTY', title: 'Viva La Vida', artist: 'Coldplay', thumb: 'https://i.ytimg.com/vi/xLR3SaA0xTY/hqdefault.jpg' },
@@ -725,17 +724,31 @@
         { videoId: 'hT_nvWreIhg', title: 'Counting Stars', artist: 'OneRepublic', thumb: 'https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg' },
         { videoId: 'YQHsXMglC9A', title: 'Hello', artist: 'Adele', thumb: 'https://i.ytimg.com/vi/YQHsXMglC9A/hqdefault.jpg' },
         { videoId: '09R8_2nJtjg', title: 'Sugar', artist: 'Maroon 5', thumb: 'https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg' },
-        { videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: 'Luis Fonsi ft. Daddy Yankee', thumb: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg' }
-      ],
-      trending: [
+        { videoId: 'kJQP7kiw5Fk', title: 'Despacito', artist: 'Luis Fonsi ft. Daddy Yankee', thumb: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg' },
         { videoId: '4NRXx6U8ABQ', title: 'Blinding Lights', artist: 'The Weeknd', thumb: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg' },
         { videoId: 'JGwWNGJdvx8', title: 'Shape of You', artist: 'Ed Sheeran', thumb: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg' },
         { videoId: 'OPf0YbXqDm0', title: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars', thumb: 'https://i.ytimg.com/vi/OPf0YbXqDm0/hqdefault.jpg' },
-        { videoId: 'L_LUpnjgPso', title: 'Ride', artist: 'Twenty One Pilots', thumb: 'https://i.ytimg.com/vi/L_LUpnjgPso/hqdefault.jpg' }
+        { videoId: 'L_LUpnjgPso', title: 'Ride', artist: 'Twenty One Pilots', thumb: 'https://i.ytimg.com/vi/L_LUpnjgPso/hqdefault.jpg' },
+        { videoId: 'SlPhMPnE58M', title: 'Memories', artist: 'Maroon 5', thumb: 'https://i.ytimg.com/vi/SlPhMPnE58M/hqdefault.jpg' },
+        { videoId: 'ebXbLfLACGM', title: 'Calma', artist: 'Pedro Capó, Farruko', thumb: 'https://i.ytimg.com/vi/ebXbLfLACGM/hqdefault.jpg' },
+        { videoId: 'CevxZvSJLk8', title: 'Roar', artist: 'Katy Perry', thumb: 'https://i.ytimg.com/vi/CevxZvSJLk8/hqdefault.jpg' },
+        { videoId: '3tmd-ClpJxA', title: 'Payphone', artist: 'Maroon 5', thumb: 'https://i.ytimg.com/vi/3tmd-ClpJxA/hqdefault.jpg' },
+        { videoId: 'kffacxfA7G4', title: 'Baby', artist: 'Justin Bieber', thumb: 'https://i.ytimg.com/vi/kffacxfA7G4/hqdefault.jpg' }
+      ],
+      trending: [
+        { videoId: 'RgKAFK5djSk', title: 'See You Again', artist: 'Wiz Khalifa ft. Charlie Puth', thumb: 'https://i.ytimg.com/vi/RgKAFK5djSk/hqdefault.jpg' },
+        { videoId: 'YykjpeuMNEk', title: 'Hymn for the Weekend', artist: 'Coldplay', thumb: 'https://i.ytimg.com/vi/YykjpeuMNEk/hqdefault.jpg' },
+        { videoId: 'e-ORhEE9VVg', title: 'Blank Space', artist: 'Taylor Swift', thumb: 'https://i.ytimg.com/vi/e-ORhEE9VVg/hqdefault.jpg' },
+        { videoId: '09R8_2nJtjg', title: 'Girls Like You', artist: 'Maroon 5 ft. Cardi B', thumb: 'https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg' },
+        { videoId: 'iS1g8G_njx8', title: 'Something Just Like This', artist: 'Chainsmokers & Coldplay', thumb: 'https://i.ytimg.com/vi/iS1g8G_njx8/hqdefault.jpg' },
+        { videoId: 'psuRGfAaju4', title: 'Firework', artist: 'Katy Perry', thumb: 'https://i.ytimg.com/vi/psuRGfAaju4/hqdefault.jpg' },
+        { videoId: 'DyDfgMOUjCI', title: 'Paparazzi', artist: 'Lady Gaga', thumb: 'https://i.ytimg.com/vi/DyDfgMOUjCI/hqdefault.jpg' },
+        { videoId: 'ktvTqknDobU', title: 'Radioactive', artist: 'Imagine Dragons', thumb: 'https://i.ytimg.com/vi/ktvTqknDobU/hqdefault.jpg' },
+        { videoId: '7wtfhZwyrcc', title: 'Believer', artist: 'Imagine Dragons', thumb: 'https://i.ytimg.com/vi/7wtfhZwyrcc/hqdefault.jpg' },
+        { videoId: 'fLexgOxsZu0', title: 'Bruno Mars - Lazy Song', artist: 'Bruno Mars', thumb: 'https://i.ytimg.com/vi/fLexgOxsZu0/hqdefault.jpg' }
       ]
     };
 
-    // YouTube Iframe Engine Initialization
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('yt-player', {
         height: '100%',
@@ -775,7 +788,6 @@
       }
     }
 
-    // Progress Loop & Seeking
     function startProgressLoop() {
       if (progressTimer) clearInterval(progressTimer);
       progressTimer = setInterval(() => {
@@ -811,7 +823,6 @@
       return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
-    // Track Playback
     async function playVideo(videoId, title, artist, thumb) {
       if (!videoId) return;
       currentVideoId = videoId;
@@ -821,7 +832,6 @@
       document.getElementById('current-artist').innerText = artist || 'YT Music';
       if (thumb) document.getElementById('current-thumb').src = thumb;
 
-      // Try server stream proxy first
       if (serverActive) {
         try {
           const res = await fetch(`${API_BASE}/api/stream/${videoId}`);
@@ -865,7 +875,6 @@
       }
     }
 
-    // Direct Track Downloading
     function downloadTrack(videoId, title) {
       if (!videoId) return;
       setLoadingState(true);
@@ -874,7 +883,6 @@
         window.open(`${API_BASE}/api/download/${videoId}`, '_blank');
         setTimeout(() => setLoadingState(false), 2000);
       } else {
-        // Direct standalone client download handler
         const downloadUrl = `https://y2mate.nu/en/v1/?url=https://www.youtube.com/watch?v=${videoId}`;
         window.open(downloadUrl, '_blank');
         setTimeout(() => setLoadingState(false), 1500);
@@ -891,7 +899,6 @@
       frame.style.display = (frame.style.display === 'none') ? 'block' : 'none';
     }
 
-    // API & Fallback Loader
     async function checkServer() {
       try {
         const res = await fetch(`${API_BASE}/api/home`, { method: 'GET' });
@@ -985,6 +992,25 @@
       `;
     }
 
+    function loadCategory(title, items) {
+      let html = `<h2 class="section-title" style="margin-bottom: 20px;">${title} (${items.length} tracks)</h2><div class="track-list">`;
+      items.forEach(t => {
+        html += `
+          <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(t.title)}', '${escapeStr(t.artist)}', '${t.thumb}')">
+            <img class="track-thumb" src="${t.thumb}">
+            <div class="track-info">
+              <div class="track-name">${t.title}</div>
+              <div class="track-artist">${t.artist}</div>
+            </div>
+            <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(t.title)}')"><i class="fa-solid fa-download"></i></button>
+            <i class="fa-solid fa-circle-play" style="font-size: 1.4rem; color: var(--accent-red);"></i>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
     async function loadCharts() {
       showLoader();
       if (serverActive) {
@@ -993,7 +1019,7 @@
           const data = await res.json();
           if (data.status === 'success') {
             const songs = data.data.videos?.items || data.data.songs?.items || [];
-            let html = `<h2 class="section-title" style="margin-bottom: 20px;">Top Charts</h2><div class="track-list">`;
+            let html = `<h2 class="section-title" style="margin-bottom: 20px;">Top Charts (${songs.length} Tracks)</h2><div class="track-list">`;
             songs.forEach(t => {
               const title = t.title;
               const artist = t.artists ? t.artists.map(a => a.name).join(', ') : 'Artist';
@@ -1014,7 +1040,7 @@
         } catch(e) {}
       }
 
-      renderCuratedHome();
+      loadCategory('Top Charts', [...CURATED_DATA.quickPicks, ...CURATED_DATA.trending]);
     }
 
     async function loadSearch(qOverride) {
@@ -1028,7 +1054,7 @@
           const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`);
           const data = await res.json();
           if (data.status === 'success' && data.data) {
-            let html = `<h2 class="section-title" style="margin-bottom: 20px;">Results for "${q}"</h2><div class="track-list">`;
+            let html = `<h2 class="section-title" style="margin-bottom: 20px;">Results for "${q}" (${data.data.length} tracks)</h2><div class="track-list">`;
             data.data.forEach(item => {
               if (item.videoId) {
                 const title = item.title;
@@ -1051,14 +1077,14 @@
         } catch(e) {}
       }
 
-      // Standalone Search Fallback
+      // Standalone Search Catalog Fallback
       setTimeout(() => {
         let html = `<h2 class="section-title" style="margin-bottom: 20px;">Results for "${q}"</h2><div class="track-list">`;
         const matching = [...CURATED_DATA.quickPicks, ...CURATED_DATA.trending].filter(item => 
           item.title.toLowerCase().includes(q.toLowerCase()) || item.artist.toLowerCase().includes(q.toLowerCase())
         );
 
-        const results = matching.length > 0 ? matching : CURATED_DATA.quickPicks;
+        const results = matching.length > 0 ? matching : [...CURATED_DATA.quickPicks, ...CURATED_DATA.trending];
         results.forEach(t => {
           html += `
             <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(t.title)}', '${escapeStr(t.artist)}', '${t.thumb}')">
@@ -1076,7 +1102,7 @@
 
     function loadExplore() {
       let html = `<h2 class="section-title" style="margin-bottom: 20px;">Explore Moods & Genres</h2><div class="horizontal-shelf" style="flex-wrap: wrap;">`;
-      const genres = ['Pop Hits', 'Rock Classics', 'Hip Hop', 'R&B & Soul', 'EDM & Dance', 'Acoustic Chill'];
+      const genres = ['Pop Hits', 'Rock Classics', 'Hip Hop', 'R&B & Soul', 'EDM & Dance', 'Acoustic Chill', 'Top Charts 2026', 'Latin Hits'];
       genres.forEach(g => {
         html += `<div class="card" onclick="loadSearch('${g}')"><div class="card-title">${g}</div><div class="card-subtitle">Genre</div></div>`;
       });
