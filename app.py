@@ -1,6 +1,7 @@
 import os
 import tempfile
-from flask import Flask, jsonify, request, send_from_directory, send_file, redirect
+import requests
+from flask import Flask, jsonify, request, send_from_directory, send_file, redirect, Response, stream_with_context
 from flask_cors import CORS
 from ytmusicapi import YTMusic
 import yt_dlp
@@ -89,8 +90,31 @@ def get_explore():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# Stream metadata endpoint
 @app.route('/api/stream/<video_id>', methods=['GET'])
-def stream_audio(video_id):
+def stream_audio_info(video_id):
+    try:
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'quiet': True,
+            'no_warnings': True
+        }
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return jsonify({
+                "status": "success",
+                "stream_url": f"/api/play/{video_id}",
+                "title": info.get('title', 'Track'),
+                "duration": info.get('duration', 0),
+                "video_id": video_id
+            })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# Proxy live audio stream chunked directly to browser
+@app.route('/api/play/<video_id>', methods=['GET'])
+def play_proxy(video_id):
     try:
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -101,54 +125,47 @@ def stream_audio(video_id):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             stream_url = info.get('url')
-            title = info.get('title', 'Track')
-            duration = info.get('duration', 0)
-            return jsonify({
-                "status": "success",
-                "stream_url": stream_url,
-                "title": title,
-                "duration": duration,
-                "video_id": video_id
-            })
+            
+        req_headers = {'User-Agent': 'Mozilla/5.0'}
+        if 'Range' in request.headers:
+            req_headers['Range'] = request.headers['Range']
+
+        r = requests.get(stream_url, headers=req_headers, stream=True, timeout=10)
+        
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in r.raw.headers.items() if name.lower() not in excluded_headers]
+        
+        return Response(stream_with_context(r.iter_content(chunk_size=1024*64)), status=r.status_code, headers=headers)
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# Download endpoint
 @app.route('/api/download/<video_id>', methods=['GET'])
 def download_audio(video_id):
-    # Check if running in Vercel Serverless environment
-    if os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'):
-        return redirect(f"https://y2mate.nu/en/v1/?url=https://www.youtube.com/watch?v={video_id}")
-    
     try:
         url = f"https://www.youtube.com/watch?v={video_id}"
-        out_template = os.path.join(DOWNLOAD_DIR, f"{video_id}.%(ext)s")
-        
         ydl_opts = {
             'format': 'bestaudio/best',
-            'outtmpl': out_template,
             'quiet': True,
             'no_warnings': True
         }
-        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+            info = ydl.extract_info(url, download=False)
+            stream_url = info.get('url')
             title = info.get('title', video_id)
-            ext = info.get('ext', 'm4a')
-            target_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.{ext}")
-            
-            if not os.path.exists(target_path):
-                for f in os.listdir(DOWNLOAD_DIR):
-                    if f.startswith(video_id):
-                        target_path = os.path.join(DOWNLOAD_DIR, f)
-                        break
-            
-            clean_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-')).strip()
-            download_filename = f"{clean_title}.{ext}" if clean_title else f"{video_id}.{ext}"
-            
-            return send_file(target_path, as_attachment=True, download_name=download_filename)
+            ext = info.get('ext', 'webm')
+
+        req = requests.get(stream_url, stream=True, headers={'User-Agent': 'Mozilla/5.0'})
+        clean_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-')).strip()
+        filename = f"{clean_title}.{ext}" if clean_title else f"{video_id}.{ext}"
+
+        response = Response(stream_with_context(req.iter_content(chunk_size=1024*64)), content_type=req.headers.get('Content-Type', 'audio/webm'))
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
     except Exception as e:
         return redirect(f"https://y2mate.nu/en/v1/?url=https://www.youtube.com/watch?v={video_id}")
 
 if __name__ == '__main__':
+    print("Starting YT Music Web UI server on http://127.0.0.1:5000 ...")
     app.run(host='0.0.0.0', port=5000, debug=True)
