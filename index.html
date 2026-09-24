@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YT Music</title>
+  <title>YT Music - Instant Caching & Playlists</title>
   <!-- Google Fonts & Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -44,20 +44,20 @@
 
     /* Sidebar */
     .sidebar {
-      width: 230px;
+      width: 240px;
       background-color: var(--bg-sidebar);
       border-right: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
       padding: 20px 10px;
-      gap: 10px;
+      gap: 8px;
     }
 
     .brand {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 0 10px 20px 10px;
+      padding: 0 10px 15px 10px;
       font-size: 1.3rem;
       font-weight: 700;
       color: #fff;
@@ -78,11 +78,20 @@
       margin-left: auto;
     }
 
+    .nav-section-title {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 16px 4px 16px;
+      font-weight: 700;
+    }
+
     .nav-item {
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 12px 16px;
+      padding: 10px 16px;
       border-radius: 10px;
       color: var(--text-sub);
       text-decoration: none;
@@ -279,9 +288,9 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
 
-    .download-btn-circle {
-      width: 36px;
-      height: 36px;
+    .download-btn-circle, .fav-btn-circle {
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
       background-color: rgba(255,255,255,0.25);
       backdrop-filter: blur(4px);
@@ -289,13 +298,18 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       transition: background 0.2s;
     }
 
-    .download-btn-circle:hover {
+    .download-btn-circle:hover, .fav-btn-circle:hover {
       background-color: #fff;
       color: #000;
+    }
+
+    .fav-btn-circle.active {
+      color: var(--accent-red);
+      background-color: #fff;
     }
 
     .card-title {
@@ -375,6 +389,10 @@
     .action-btn:hover {
       color: var(--accent-red);
       background-color: rgba(255,255,255,0.1);
+    }
+
+    .action-btn.fav-active {
+      color: var(--accent-red);
     }
 
     /* Bottom Player Bar */
@@ -466,7 +484,6 @@
       transform: scale(0.95);
     }
 
-    /* Scrubber Bar & Animated White Knob */
     .progress-container {
       display: flex;
       align-items: center;
@@ -554,7 +571,6 @@
       width: 28%;
     }
 
-    /* Floating Video Window */
     #player-frame-container {
       position: fixed;
       bottom: 100px;
@@ -622,13 +638,17 @@
       <div class="brand">
         <i class="fa-brands fa-youtube"></i>
         <span>YT Music</span>
-        <span class="status-badge" id="mode-badge">Vercel</span>
+        <span class="status-badge" id="mode-badge">Cached</span>
       </div>
 
       <div class="nav-item active" onclick="loadHome()"><i class="fa-solid fa-house"></i> Home</div>
       <div class="nav-item" onclick="loadCharts()"><i class="fa-solid fa-chart-line"></i> Charts</div>
       <div class="nav-item" onclick="loadExplore()"><i class="fa-solid fa-compass"></i> Explore</div>
-      <div class="nav-item" onclick="loadCategory('Top Hits', CURATED_DATA.quickPicks)"><i class="fa-solid fa-fire"></i> Top Hits</div>
+
+      <div class="nav-section-title">My Library</div>
+      <div class="nav-item" onclick="loadRecentlyPlayed()"><i class="fa-solid fa-clock-rotate-left"></i> History</div>
+      <div class="nav-item" onclick="loadFavorites()"><i class="fa-solid fa-heart"></i> Favorites</div>
+      <div class="nav-item" onclick="loadPlaylistsView()"><i class="fa-solid fa-list-ul"></i> Playlists</div>
     </div>
 
     <!-- Main Section -->
@@ -636,7 +656,7 @@
       <div class="top-bar">
         <div class="search-box">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="search-input" placeholder="Search ALL songs, artists, albums..." onkeypress="handleSearchKey(event)">
+          <input type="text" id="search-input" placeholder="Search millions of songs, artists, albums..." onkeypress="handleSearchKey(event)">
         </div>
         <div class="filter-chips">
           <div class="chip active" onclick="setFilter(this, 'all')">All</div>
@@ -688,6 +708,7 @@
     </div>
 
     <div class="player-right">
+      <button class="action-btn" id="player-fav-btn" onclick="toggleCurrentFavorite()"><i class="fa-regular fa-heart"></i></button>
       <button class="download-bar-btn" onclick="downloadCurrentSong()"><i class="fa-solid fa-download"></i> Download MP3</button>
       <button class="toggle-video-btn" onclick="toggleVideoWindow()"><i class="fa-solid fa-tv"></i> Player Window</button>
     </div>
@@ -696,21 +717,24 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
-    // Hardcoded Vercel Backend URL
     const HARDCODED_VERCEL_BACKEND = 'https://ytmusic-ui.vercel.app';
-    
     const API_BASE = (window.location.hostname.includes('vercel.app')) 
       ? window.location.origin 
       : HARDCODED_VERCEL_BACKEND;
 
-    let serverActive = true;
     let currentFilter = 'all';
     let player = null;
     let isPlaying = false;
     let currentVideoId = 'xLR3SaA0xTY';
+    let currentSongObj = null;
     let playlistQueue = [];
     let currentQueueIndex = -1;
     let progressTimer = null;
+
+    // Instant Caching Storage & Library
+    const API_CACHE = JSON.parse(localStorage.getItem('YT_API_CACHE') || '{}');
+    let RECENTLY_PLAYED = JSON.parse(localStorage.getItem('YT_RECENTLY_PLAYED') || '[]');
+    let MY_FAVORITES = JSON.parse(localStorage.getItem('YT_MY_FAVORITES') || '[]');
 
     const audio = document.getElementById('native-audio');
     const seekBar = document.getElementById('seek-bar');
@@ -732,6 +756,29 @@
         { videoId: 'L_LUpnjgPso', title: 'Ride', artist: 'Twenty One Pilots', thumb: 'https://i.ytimg.com/vi/L_LUpnjgPso/hqdefault.jpg' }
       ]
     };
+
+    // Cached API Fetcher for 0ms Load Times
+    async function fetchAPI(endpoint) {
+      if (API_CACHE[endpoint]) {
+        const cached = API_CACHE[endpoint];
+        if (Date.now() - cached.timestamp < 60 * 60 * 1000) {
+          return cached.data;
+        }
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}${endpoint}`);
+        const data = await res.json();
+        if (data.status === 'success' && data.data) {
+          API_CACHE[endpoint] = { data: data.data, timestamp: Date.now() };
+          try { localStorage.setItem('YT_API_CACHE', JSON.stringify(API_CACHE)); } catch(e){}
+          return data.data;
+        }
+      } catch(err) {
+        if (API_CACHE[endpoint]) return API_CACHE[endpoint].data;
+      }
+      return null;
+    }
 
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('yt-player', {
@@ -810,17 +857,20 @@
     async function playVideo(videoId, title, artist, thumb) {
       if (!videoId) return;
       currentVideoId = videoId;
+      currentSongObj = { videoId, title, artist, thumb };
       setLoadingState(true);
+
+      trackPlayedSong(currentSongObj);
+      updateFavoriteUI();
 
       document.getElementById('current-title').innerText = title || 'Playing Track';
       document.getElementById('current-artist').innerText = artist || 'YT Music';
       if (thumb) document.getElementById('current-thumb').src = thumb;
 
       try {
-        const res = await fetch(`${API_BASE}/api/stream/${videoId}`);
-        const data = await res.json();
-        if (data.status === 'success' && data.stream_url) {
-          audio.src = `${API_BASE}${data.stream_url}`;
+        const streamData = await fetchAPI(`/api/stream/${videoId}`);
+        if (streamData && streamData.stream_url) {
+          audio.src = `${API_BASE}${streamData.stream_url}`;
           audio.play().then(() => {
             setLoadingState(false);
             isPlaying = true;
@@ -869,27 +919,72 @@
       else alert("Select a song to download!");
     }
 
+    // Recently Played & Favorites Tracking
+    function trackPlayedSong(song) {
+      RECENTLY_PLAYED = RECENTLY_PLAYED.filter(s => s.videoId !== song.videoId);
+      RECENTLY_PLAYED.unshift(song);
+      if (RECENTLY_PLAYED.length > 50) RECENTLY_PLAYED.pop();
+      try { localStorage.setItem('YT_RECENTLY_PLAYED', JSON.stringify(RECENTLY_PLAYED)); } catch(e){}
+    }
+
+    function toggleFavorite(song) {
+      const idx = MY_FAVORITES.findIndex(s => s.videoId === song.videoId);
+      if (idx >= 0) {
+        MY_FAVORITES.splice(idx, 1);
+      } else {
+        MY_FAVORITES.unshift(song);
+      }
+      try { localStorage.setItem('YT_MY_FAVORITES', JSON.stringify(MY_FAVORITES)); } catch(e){}
+      updateFavoriteUI();
+    }
+
+    function toggleCurrentFavorite() {
+      if (currentSongObj) {
+        toggleFavorite(currentSongObj);
+      }
+    }
+
+    function isFavorite(videoId) {
+      return MY_FAVORITES.some(s => s.videoId === videoId);
+    }
+
+    function updateFavoriteUI() {
+      const favBtn = document.getElementById('player-fav-btn');
+      if (favBtn && currentVideoId) {
+        if (isFavorite(currentVideoId)) {
+          favBtn.innerHTML = '<i class="fa-solid fa-heart" style="color: var(--accent-red);"></i>';
+        } else {
+          favBtn.innerHTML = '<i class="fa-regular fa-heart"></i>';
+        }
+      }
+    }
+
     function toggleVideoWindow() {
       const frame = document.getElementById('player-frame-container');
       frame.style.display = (frame.style.display === 'none') ? 'block' : 'none';
     }
 
+    // Views
     async function loadHome() {
       showLoader();
-      try {
-        const res = await fetch(`${API_BASE}/api/home`);
-        const data = await res.json();
-        if (data.status === 'success' && data.data) {
-          renderServerHome(data.data);
-          return;
-        }
-      } catch(e) {}
-
-      renderCuratedHome();
+      setActiveNav(0);
+      const homeData = await fetchAPI('/api/home');
+      if (homeData) {
+        renderServerHome(homeData);
+      } else {
+        renderCuratedHome();
+      }
     }
 
     function renderServerHome(homeData) {
       let html = '';
+
+      if (RECENTLY_PLAYED.length > 0) {
+        html += `<div class="section-header"><h2 class="section-title">Recently Played (${RECENTLY_PLAYED.length})</h2></div><div class="horizontal-shelf">`;
+        RECENTLY_PLAYED.slice(0, 15).forEach(item => { html += renderCard(item); });
+        html += `</div>`;
+      }
+
       homeData.forEach(shelf => {
         const title = shelf.title || 'Recommended';
         const items = shelf.contents || shelf.items || [];
@@ -926,22 +1021,21 @@
     }
 
     function renderCuratedHome() {
-      let html = `
-        <div class="section-header"><h2 class="section-title">Featured Picks (${CURATED_DATA.quickPicks.length} tracks)</h2></div>
-        <div class="horizontal-shelf">
-      `;
+      let html = `<div class="section-header"><h2 class="section-title">Featured Picks (${CURATED_DATA.quickPicks.length} tracks)</h2></div><div class="horizontal-shelf">`;
       CURATED_DATA.quickPicks.forEach(item => { html += renderCard(item); });
       html += `</div>`;
       document.getElementById('dynamic-content').innerHTML = html;
     }
 
     function renderCard(item) {
+      const isFav = isFavorite(item.videoId);
       return `
         <div class="card" onclick="playVideo('${item.videoId}', '${escapeStr(item.title)}', '${escapeStr(item.artist)}', '${item.thumb}')">
           <div class="card-img-wrapper">
             <img src="${item.thumb}" loading="lazy">
             <div class="play-overlay">
               <div class="play-btn-circle"><i class="fa-solid fa-play"></i></div>
+              <div class="fav-btn-circle ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite({videoId:'${item.videoId}', title:'${escapeStr(item.title)}', artist:'${escapeStr(item.artist)}', thumb:'${item.thumb}'}); loadHome();"><i class="fa-solid fa-heart"></i></div>
               <div class="download-btn-circle" onclick="event.stopPropagation(); downloadTrack('${item.videoId}', '${escapeStr(item.title)}')"><i class="fa-solid fa-download"></i></div>
             </div>
           </div>
@@ -951,53 +1045,31 @@
       `;
     }
 
-    function loadCategory(title, items) {
-      let html = `<h2 class="section-title" style="margin-bottom: 20px;">${title} (${items.length} tracks)</h2><div class="track-list">`;
-      items.forEach(t => {
-        html += `
-          <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(t.title)}', '${escapeStr(t.artist)}', '${t.thumb}')">
-            <img class="track-thumb" src="${t.thumb}">
-            <div class="track-info">
-              <div class="track-name">${t.title}</div>
-              <div class="track-artist">${t.artist}</div>
-            </div>
-            <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(t.title)}')"><i class="fa-solid fa-download"></i></button>
-            <i class="fa-solid fa-circle-play" style="font-size: 1.4rem; color: var(--accent-red);"></i>
-          </div>
-        `;
-      });
-      html += `</div>`;
-      document.getElementById('dynamic-content').innerHTML = html;
-    }
-
     async function loadCharts() {
       showLoader();
-      try {
-        const res = await fetch(`${API_BASE}/api/charts`);
-        const data = await res.json();
-        if (data.status === 'success') {
-          const songs = data.data.videos?.items || data.data.songs?.items || [];
-          let html = `<h2 class="section-title" style="margin-bottom: 20px;">Top Charts (${songs.length} Tracks)</h2><div class="track-list">`;
-          songs.forEach(t => {
-            const title = t.title;
-            const artist = t.artists ? t.artists.map(a => a.name).join(', ') : 'Artist';
-            const thumb = getThumb(t);
-            html += `
-              <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
-                <img class="track-thumb" src="${thumb}">
-                <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
-                <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
-                <i class="fa-solid fa-circle-play" style="font-size: 1.4rem; color: var(--accent-red);"></i>
-              </div>
-            `;
-          });
-          html += `</div>`;
-          document.getElementById('dynamic-content').innerHTML = html;
-          return;
-        }
-      } catch(e) {}
-
-      loadCategory('Top Charts', CURATED_DATA.quickPicks);
+      setActiveNav(1);
+      const charts = await fetchAPI('/api/charts');
+      if (charts) {
+        const songs = charts.videos?.items || charts.songs?.items || [];
+        let html = `<h2 class="section-title" style="margin-bottom: 20px;">Top Charts (${songs.length} Tracks)</h2><div class="track-list">`;
+        songs.forEach(t => {
+          const title = t.title;
+          const artist = t.artists ? t.artists.map(a => a.name).join(', ') : 'Artist';
+          const thumb = getThumb(t);
+          const isFav = isFavorite(t.videoId);
+          html += `
+            <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
+              <img class="track-thumb" src="${thumb}">
+              <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
+              <button class="action-btn ${isFav ? 'fav-active' : ''}" onclick="event.stopPropagation(); toggleFavorite({videoId:'${t.videoId}', title:'${escapeStr(title)}', artist:'${escapeStr(artist)}', thumb:'${thumb}'}); loadCharts();"><i class="fa-solid fa-heart"></i></button>
+              <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
+              <i class="fa-solid fa-circle-play" style="font-size: 1.4rem; color: var(--accent-red);"></i>
+            </div>
+          `;
+        });
+        html += `</div>`;
+        document.getElementById('dynamic-content').innerHTML = html;
+      }
     }
 
     async function loadSearch(qOverride) {
@@ -1005,37 +1077,33 @@
       if (!q.trim()) return;
 
       showLoader();
-
-      try {
-        const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`);
-        const data = await res.json();
-        if (data.status === 'success' && data.data) {
-          let html = `<h2 class="section-title" style="margin-bottom: 20px;">All Results for "${q}" (${data.data.length} items)</h2><div class="track-list">`;
-          data.data.forEach(item => {
-            if (item.videoId) {
-              const title = item.title;
-              const artist = item.artists ? item.artists.map(a => a.name).join(', ') : (item.author || '');
-              const thumb = getThumb(item);
-              html += `
-                <div class="track-item" onclick="playVideo('${item.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
-                  <img class="track-thumb" src="${thumb}">
-                  <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
-                  <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${item.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
-                  <i class="fa-solid fa-play" style="color: #fff;"></i>
-                </div>
-              `;
-            }
-          });
-          html += `</div>`;
-          document.getElementById('dynamic-content').innerHTML = html;
-          return;
-        }
-      } catch(e) {}
-
-      loadCategory(`Search for "${q}"`, CURATED_DATA.quickPicks);
+      const results = await fetchAPI(`/api/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`);
+      if (results) {
+        let html = `<h2 class="section-title" style="margin-bottom: 20px;">All Results for "${q}" (${results.length} items)</h2><div class="track-list">`;
+        results.forEach(item => {
+          if (item.videoId) {
+            const title = item.title;
+            const artist = item.artists ? item.artists.map(a => a.name).join(', ') : (item.author || '');
+            const thumb = getThumb(item);
+            const isFav = isFavorite(item.videoId);
+            html += `
+              <div class="track-item" onclick="playVideo('${item.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
+                <img class="track-thumb" src="${thumb}">
+                <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
+                <button class="action-btn ${isFav ? 'fav-active' : ''}" onclick="event.stopPropagation(); toggleFavorite({videoId:'${item.videoId}', title:'${escapeStr(title)}', artist:'${escapeStr(artist)}', thumb:'${thumb}'}); loadSearch('${escapeStr(q)}');"><i class="fa-solid fa-heart"></i></button>
+                <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${item.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
+                <i class="fa-solid fa-play" style="color: #fff;"></i>
+              </div>
+            `;
+          }
+        });
+        html += `</div>`;
+        document.getElementById('dynamic-content').innerHTML = html;
+      }
     }
 
     function loadExplore() {
+      setActiveNav(2);
       let html = `<h2 class="section-title" style="margin-bottom: 20px;">Explore Moods & Genres</h2><div class="horizontal-shelf" style="flex-wrap: wrap;">`;
       const genres = ['Pop Hits', 'Rock Classics', 'Hip Hop', 'R&B & Soul', 'EDM & Dance', 'Acoustic Chill', 'Top Charts 2026', 'Latin Hits'];
       genres.forEach(g => {
@@ -1043,6 +1111,79 @@
       });
       html += `</div>`;
       document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    function loadRecentlyPlayed() {
+      setActiveNav(3);
+      if (RECENTLY_PLAYED.length === 0) {
+        document.getElementById('dynamic-content').innerHTML = `<h2 class="section-title">History</h2><p style="color: var(--text-sub); margin-top: 15px;">No recently played songs yet. Start playing tracks to see your history!</p>`;
+        return;
+      }
+
+      let html = `<h2 class="section-title" style="margin-bottom: 20px;">Recently Played History (${RECENTLY_PLAYED.length} Tracks)</h2><div class="track-list">`;
+      RECENTLY_PLAYED.forEach(t => {
+        const isFav = isFavorite(t.videoId);
+        html += `
+          <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(t.title)}', '${escapeStr(t.artist)}', '${t.thumb}')">
+            <img class="track-thumb" src="${t.thumb}">
+            <div class="track-info"><div class="track-name">${t.title}</div><div class="track-artist">${t.artist}</div></div>
+            <button class="action-btn ${isFav ? 'fav-active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${t.videoId}'); loadRecentlyPlayed();"><i class="fa-solid fa-heart"></i></button>
+            <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(t.title)}')"><i class="fa-solid fa-download"></i></button>
+            <i class="fa-solid fa-play" style="color: #fff;"></i>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    function loadFavorites() {
+      setActiveNav(4);
+      if (MY_FAVORITES.length === 0) {
+        document.getElementById('dynamic-content').innerHTML = `<h2 class="section-title">Favorites</h2><p style="color: var(--text-sub); margin-top: 15px;">No favorite tracks added yet. Click the heart icon on any song to save it here!</p>`;
+        return;
+      }
+
+      let html = `<h2 class="section-title" style="margin-bottom: 20px;">My Favorite Tracks (${MY_FAVORITES.length} Tracks)</h2><div class="track-list">`;
+      MY_FAVORITES.forEach(t => {
+        html += `
+          <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(t.title)}', '${escapeStr(t.artist)}', '${t.thumb}')">
+            <img class="track-thumb" src="${t.thumb}">
+            <div class="track-info"><div class="track-name">${t.title}</div><div class="track-artist">${t.artist}</div></div>
+            <button class="action-btn fav-active" onclick="event.stopPropagation(); toggleFavorite({videoId:'${t.videoId}'}); loadFavorites();"><i class="fa-solid fa-heart"></i></button>
+            <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(t.title)}')"><i class="fa-solid fa-download"></i></button>
+            <i class="fa-solid fa-play" style="color: #fff;"></i>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    function loadPlaylistsView() {
+      setActiveNav(5);
+      let html = `<h2 class="section-title" style="margin-bottom: 20px;">Popular Playlists</h2><div class="horizontal-shelf" style="flex-wrap: wrap;">`;
+      const playlists = [
+        { id: 'VLRDCLAK5uy_mwrn2QlMTGaTnHg45Gut1T6treNoLC6x4', title: 'Viva La Vida Playlist', subtitle: 'Top Rock' },
+        { id: 'VLRDCLAK5uy_k54Zr5UY8lb-LJx1XLj0q4rH355y9dJV8', title: "'00s Rock Chillout", subtitle: 'Acoustic & Rock' }
+      ];
+      playlists.forEach(p => {
+        html += `
+          <div class="card" onclick="loadSearch('${p.title}')">
+            <div class="card-title">${p.title}</div>
+            <div class="card-subtitle">${p.subtitle}</div>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    function setActiveNav(idx) {
+      document.querySelectorAll('.sidebar .nav-item').forEach((el, i) => {
+        if (i === idx) el.classList.add('active');
+        else el.classList.remove('active');
+      });
     }
 
     function getThumb(item) {
