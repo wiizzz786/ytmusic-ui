@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YT Music - ytmusicapi & yt-dlp</title>
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #030303;
+      --bg-card: #181818;
+      --bg-card-hover: #282828;
+      --bg-sidebar: #0f0f0f;
+      --accent-red: #ff0000;
+      --text-main: #ffffff;
+      --text-sub: #aaa;
+      --border-color: #2a2a2a;
+      --player-height: 90px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Layout Structure */
+    .app-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 230px;
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 10px;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 10px 20px 10px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .brand i {
+      color: var(--accent-red);
+      font-size: 1.8rem;
+    }
+
+    .badge-api {
+      font-size: 0.7rem;
+      background: rgba(255,0,0,0.25);
+      color: var(--accent-red);
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--accent-red);
+      margin-left: auto;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      color: var(--text-sub);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      background-color: var(--bg-card-hover);
+      color: var(--text-main);
+    }
+
+    .nav-item i {
+      font-size: 1.2rem;
+    }
+
+    /* Main Section */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: linear-gradient(180deg, #181818 0%, #030303 300px);
+      padding-bottom: calc(var(--player-height) + 20px);
+    }
+
+    /* Top Bar Header */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background-color: rgba(3, 3, 3, 0.85);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      gap: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      background-color: #222;
+      border: 1px solid #333;
+      border-radius: 25px;
+      padding: 8px 16px;
+      width: 450px;
+      transition: border-color 0.2s;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--accent-red);
+    }
+
+    .search-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      width: 100%;
+      padding-left: 10px;
+      font-size: 0.95rem;
+    }
+
+    .search-box i {
+      color: var(--text-sub);
+    }
+
+    .filter-chips {
+      display: flex;
+      gap: 10px;
+      padding: 10px 32px;
+      overflow-x: auto;
+    }
+
+    .chip {
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 6px 16px;
+      border-radius: 18px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    .chip:hover, .chip.active {
+      background-color: #fff;
+      color: #000;
+    }
+
+    /* Scrollable Sections */
+    .content-padding {
+      padding: 20px 32px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 25px 0 15px 0;
+    }
+
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .horizontal-shelf {
+      display: flex;
+      gap: 18px;
+      overflow-x: auto;
+      padding-bottom: 15px;
+      scroll-behavior: smooth;
+    }
+
+    .horizontal-shelf::-webkit-scrollbar {
+      height: 6px;
+    }
+    .horizontal-shelf::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 3px;
+    }
+
+    /* Cards */
+    .card {
+      width: 175px;
+      flex-shrink: 0;
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      background-color: var(--bg-card-hover);
+      transform: translateY(-4px);
+    }
+
+    .card-img-wrapper {
+      position: relative;
+      width: 100%;
+      padding-top: 100%;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .card-img-wrapper img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .play-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .card:hover .play-overlay {
+      opacity: 1;
+    }
+
+    .play-btn-circle {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background-color: var(--accent-red);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .download-btn-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: rgba(255,255,255,0.2);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      transition: background 0.2s;
+    }
+
+    .download-btn-circle:hover {
+      background-color: #fff;
+      color: #000;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Track List Table View */
+    .track-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 15px;
+    }
+
+    .track-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      border-radius: 8px;
+      gap: 16px;
+      background-color: rgba(255,255,255,0.02);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .track-item:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    .track-thumb {
+      width: 46px;
+      height: 46px;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+
+    .track-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .track-name {
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .track-artist {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      font-size: 1.1rem;
+      padding: 8px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    .action-btn:hover {
+      color: var(--accent-red);
+      background-color: rgba(255,255,255,0.1);
+    }
+
+    /* Bottom Player Bar */
+    .player-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: var(--player-height);
+      background-color: #121212;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 100;
+    }
+
+    .player-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 28%;
+    }
+
+    .player-thumb {
+      width: 54px;
+      height: 54px;
+      border-radius: 4px;
+      background-color: #222;
+      object-fit: cover;
+    }
+
+    .player-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .player-artist {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
+
+    .player-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 44%;
+    }
+
+    .player-controls {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .ctrl-btn {
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .ctrl-btn:hover {
+      color: var(--text-main);
+    }
+
+    .play-main-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background-color: #fff;
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .play-main-btn:active {
+      transform: scale(0.95);
+    }
+
+    .progress-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .time-stamp {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      width: 40px;
+      text-align: center;
+    }
+
+    .seek-bar {
+      flex: 1;
+      height: 4px;
+      appearance: none;
+      background: #444;
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .seek-bar::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      cursor: pointer;
+    }
+
+    .player-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      width: 28%;
+    }
+
+    #player-frame-container {
+      position: fixed;
+      bottom: 100px;
+      right: 20px;
+      width: 320px;
+      height: 180px;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+      display: none;
+      z-index: 99;
+      border: 1px solid #333;
+    }
+
+    #yt-player {
+      width: 100%;
+      height: 100%;
+    }
+
+    .toggle-video-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid #444;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .download-bar-btn {
+      background: var(--accent-red);
+      border: none;
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+    }
+
+    .download-bar-btn:hover {
+      opacity: 0.9;
+    }
+
+    .loader {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      color: var(--accent-red);
+      font-size: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="brand">
+        <i class="fa-brands fa-youtube"></i>
+        <span>YT Music</span>
+        <span class="badge-api">ytmusicapi</span>
+      </div>
+      <div class="nav-item active" onclick="loadHome()"><i class="fa-solid fa-house"></i> Home</div>
+      <div class="nav-item" onclick="loadCharts()"><i class="fa-solid fa-chart-line"></i> Charts</div>
+      <div class="nav-item" onclick="loadExplore()"><i class="fa-solid fa-compass"></i> Explore</div>
+      <div class="nav-item" onclick="loadSearch('Top Hits 2026')"><i class="fa-solid fa-fire"></i> Top Hits</div>
+    </div>
+
+    <!-- Main View -->
+    <div class="main-content" id="main-content">
+      <div class="top-bar">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="search-input" placeholder="Search YT Music..." onkeypress="handleSearchKey(event)">
+        </div>
+        <div class="filter-chips">
+          <div class="chip active" onclick="setFilter(this, 'all')">All</div>
+          <div class="chip" onclick="setFilter(this, 'songs')">Songs</div>
+          <div class="chip" onclick="setFilter(this, 'albums')">Albums</div>
+          <div class="chip" onclick="setFilter(this, 'artists')">Artists</div>
+          <div class="chip" onclick="setFilter(this, 'playlists')">Playlists</div>
+        </div>
+      </div>
+
+      <div class="content-padding" id="dynamic-content">
+        <div class="loader"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HTML5 Native Audio element for yt-dlp direct streaming -->
+  <audio id="native-audio" style="display:none;"></audio>
+
+  <!-- YouTube Iframe Container -->
+  <div id="player-frame-container">
+    <div id="yt-player"></div>
+  </div>
+
+  <!-- Bottom Player Bar -->
+  <div class="player-bar">
+    <div class="player-left">
+      <img id="current-thumb" class="player-thumb" src="https://via.placeholder.com/60" alt="Thumbnail">
+      <div style="overflow: hidden;">
+        <div id="current-title" class="player-title">Select a track</div>
+        <div id="current-artist" class="player-artist">YT Music</div>
+      </div>
+    </div>
+
+    <div class="player-center">
+      <div class="player-controls">
+        <button class="ctrl-btn" onclick="prevSong()"><i class="fa-solid fa-backward-step"></i></button>
+        <div class="play-main-btn" id="play-pause-btn" onclick="togglePlay()"><i class="fa-solid fa-play"></i></div>
+        <button class="ctrl-btn" onclick="nextSong()"><i class="fa-solid fa-forward-step"></i></button>
+      </div>
+      <div class="progress-container">
+        <span class="time-stamp" id="curr-time">0:00</span>
+        <input type="range" class="seek-bar" id="seek-bar" value="0" min="0" max="100" oninput="onSeekInput(this.value)">
+        <span class="time-stamp" id="dur-time">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-right">
+      <button class="download-bar-btn" id="bar-download-btn" onclick="downloadCurrentSong()"><i class="fa-solid fa-download"></i> Download MP3</button>
+      <button class="toggle-video-btn" onclick="toggleVideoWindow()"><i class="fa-solid fa-tv"></i> Video</button>
+    </div>
+  </div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    const API_BASE = (window.location.protocol === 'file:' || !window.location.port) 
+      ? 'http://127.0.0.1:5000' 
+      : window.location.origin;
+
+    let currentFilter = 'all';
+    let player = null;
+    let isPlaying = false;
+    let playlistQueue = [];
+    let currentQueueIndex = -1;
+    let currentVideoId = null;
+
+    const audio = document.getElementById('native-audio');
+    const seekBar = document.getElementById('seek-bar');
+    const currTime = document.getElementById('curr-time');
+    const durTime = document.getElementById('dur-time');
+
+    // Audio progress events
+    audio.addEventListener('timeupdate', () => {
+      if (!audio.duration) return;
+      const pct = (audio.currentTime / audio.duration) * 100;
+      seekBar.value = pct;
+      currTime.innerText = formatTime(audio.currentTime);
+      durTime.innerText = formatTime(audio.duration);
+    });
+
+    audio.addEventListener('ended', () => {
+      if (playlistQueue.length > currentQueueIndex + 1) {
+        nextSong();
+      } else {
+        isPlaying = false;
+        document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-play"></i>';
+      }
+    });
+
+    function formatTime(secs) {
+      if (isNaN(secs)) return '0:00';
+      const m = Math.floor(secs / 60);
+      const s = Math.floor(secs % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function onSeekInput(val) {
+      if (audio.duration) {
+        audio.currentTime = (val / 100) * audio.duration;
+      }
+    }
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('yt-player', {
+        height: '100%',
+        width: '100%',
+        playerVars: { 'autoplay': 1, 'controls': 1 }
+      });
+    }
+
+    // Play Track using yt-dlp direct audio stream from python server
+    async function playVideo(videoId, title, artist, thumb) {
+      if (!videoId) return;
+      currentVideoId = videoId;
+      document.getElementById('current-title').innerText = title || 'Playing Track';
+      document.getElementById('current-artist').innerText = artist || 'YT Music';
+      if (thumb) document.getElementById('current-thumb').src = thumb;
+
+      // Pause iframe if active
+      if (player && player.pauseVideo) try { player.pauseVideo(); } catch(e){}
+
+      // Fetch yt-dlp stream URL from python backend
+      try {
+        const res = await fetch(`${API_BASE}/api/stream/${videoId}`);
+        const data = await res.json();
+
+        if (data.status === 'success' && data.stream_url) {
+          audio.src = data.stream_url;
+          audio.play();
+          isPlaying = true;
+          document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+
+          if (player && player.loadVideoById) {
+            player.cueVideoById(videoId);
+          }
+        } else {
+          // Fallback to YouTube iframe player
+          if (player && player.loadVideoById) {
+            player.loadVideoById(videoId);
+            isPlaying = true;
+            document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+          }
+        }
+      } catch (err) {
+        console.error("yt-dlp Stream Extraction:", err);
+        if (player && player.loadVideoById) {
+          player.loadVideoById(videoId);
+          isPlaying = true;
+          document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+        }
+      }
+    }
+
+    function togglePlay() {
+      if (!audio.src && currentVideoId) {
+        playVideo(currentVideoId);
+        return;
+      }
+
+      if (isPlaying) {
+        audio.pause();
+        if (player && player.pauseVideo) try { player.pauseVideo(); } catch(e){}
+        isPlaying = false;
+        document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-play"></i>';
+      } else {
+        audio.play();
+        isPlaying = true;
+        document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+      }
+    }
+
+    function downloadTrack(videoId, title) {
+      if (!videoId) return;
+      // Triggers yt-dlp MP3 download from python backend
+      window.open(`${API_BASE}/api/download/${videoId}`, '_blank');
+    }
+
+    function downloadCurrentSong() {
+      if (currentVideoId) {
+        downloadTrack(currentVideoId);
+      } else {
+        alert("Select a song to download!");
+      }
+    }
+
+    function toggleVideoWindow() {
+      const frame = document.getElementById('player-frame-container');
+      frame.style.display = (frame.style.display === 'block') ? 'none' : 'block';
+    }
+
+    // ytmusicapi REST Calls
+    async function fetchAPI(endpoint) {
+      const container = document.getElementById('dynamic-content');
+      try {
+        const res = await fetch(`${API_BASE}${endpoint}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          return data.data;
+        } else {
+          throw new Error(data.message || 'Error fetching data');
+        }
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div style="color: #ff5555; padding: 20px;">
+          <h3>Failed to connect to YT Music Python server</h3>
+          <p>${err.message}</p>
+          <p>Please ensure backend server is running at http://127.0.0.1:5000</p>
+        </div>`;
+        return null;
+      }
+    }
+
+    async function loadHome() {
+      showLoader();
+      const homeData = await fetchAPI('/api/home');
+      if (!homeData) return;
+
+      let html = '';
+      homeData.forEach(shelf => {
+        const title = shelf.title || 'Recommended for You';
+        const items = shelf.contents || shelf.items || [];
+        if (items.length === 0) return;
+
+        html += `
+          <div class="section-header">
+            <h2 class="section-title">${title}</h2>
+          </div>
+          <div class="horizontal-shelf">
+        `;
+
+        items.forEach(item => {
+          const title = item.title || 'Untitled';
+          const subtitle = item.artists ? item.artists.map(a => a.name).join(', ') : (item.author || item.type || '');
+          const thumb = getThumb(item);
+          const videoId = item.videoId;
+          const browseId = item.browseId;
+
+          let onclickAction = `playVideo('${videoId}', '${escapeStr(title)}', '${escapeStr(subtitle)}', '${thumb}')`;
+          if (browseId && !videoId) {
+            if (browseId.startsWith('VL') || browseId.startsWith('PL')) onclickAction = `loadPlaylist('${browseId}')`;
+            else if (browseId.startsWith('MPRE')) onclickAction = `loadAlbum('${browseId}')`;
+            else onclickAction = `loadArtist('${browseId}')`;
+          }
+
+          html += `
+            <div class="card" onclick="${onclickAction}">
+              <div class="card-img-wrapper">
+                <img src="${thumb}" alt="${escapeStr(title)}" loading="lazy">
+                <div class="play-overlay">
+                  <div class="play-btn-circle"><i class="fa-solid fa-play"></i></div>
+                  ${videoId ? `<div class="download-btn-circle" onclick="event.stopPropagation(); downloadTrack('${videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></div>` : ''}
+                </div>
+              </div>
+              <div class="card-title">${title}</div>
+              <div class="card-subtitle">${subtitle}</div>
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+      });
+
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    async function loadCharts() {
+      showLoader();
+      const charts = await fetchAPI('/api/charts');
+      if (!charts) return;
+
+      let html = `<h2 class="section-title" style="margin-bottom: 20px;">YT Music Top Charts</h2>`;
+      const songs = charts.videos?.items || charts.songs?.items || [];
+      if (songs.length > 0) {
+        html += `<h3 style="margin-top: 10px; color: var(--text-sub);">Top Trending Tracks</h3><div class="track-list">`;
+        songs.forEach(track => {
+          const title = track.title || 'Unknown Track';
+          const artist = track.artists ? track.artists.map(a => a.name).join(', ') : 'Artist';
+          const thumb = getThumb(track);
+          const videoId = track.videoId;
+
+          html += `
+            <div class="track-item" onclick="playVideo('${videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
+              <img class="track-thumb" src="${thumb}">
+              <div class="track-info">
+                <div class="track-name">${title}</div>
+                <div class="track-artist">${artist}</div>
+              </div>
+              <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${videoId}', '${escapeStr(title)}')" title="Download MP3 via yt-dlp"><i class="fa-solid fa-download"></i></button>
+              <i class="fa-solid fa-circle-play" style="font-size: 1.4rem; color: var(--accent-red);"></i>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    async function loadSearch(queryOverride) {
+      const q = queryOverride || document.getElementById('search-input').value;
+      if (!q.trim()) return;
+
+      showLoader();
+      const results = await fetchAPI(`/api/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`);
+      if (!results) return;
+
+      let html = `<h2 class="section-title" style="margin-bottom: 20px;">Search Results for "${q}"</h2>`;
+      const songs = results.filter(r => r.videoId);
+      const playlistsAlbums = results.filter(r => !r.videoId && r.browseId);
+
+      if (songs.length > 0) {
+        html += `<h3 style="margin: 15px 0; color: var(--text-sub);">Tracks & Videos</h3><div class="track-list">`;
+        songs.forEach(item => {
+          const title = item.title;
+          const artist = item.artists ? item.artists.map(a => a.name).join(', ') : (item.author || '');
+          const thumb = getThumb(item);
+
+          html += `
+            <div class="track-item" onclick="playVideo('${item.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
+              <img class="track-thumb" src="${thumb}">
+              <div class="track-info">
+                <div class="track-name">${title}</div>
+                <div class="track-artist">${artist} • ${item.resultType || 'Song'}</div>
+              </div>
+              <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${item.videoId}', '${escapeStr(title)}')" title="Download MP3 via yt-dlp"><i class="fa-solid fa-download"></i></button>
+              <i class="fa-solid fa-play" style="color: #fff;"></i>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      if (playlistsAlbums.length > 0) {
+        html += `<h3 style="margin: 25px 0 15px 0; color: var(--text-sub);">Albums, Playlists & Artists</h3><div class="horizontal-shelf" style="flex-wrap: wrap;">`;
+        playlistsAlbums.forEach(item => {
+          const title = item.title || item.artist;
+          const subtitle = item.resultType || 'Item';
+          const thumb = getThumb(item);
+          const browseId = item.browseId;
+
+          let clickFn = `loadPlaylist('${browseId}')`;
+          if (item.resultType === 'album') clickFn = `loadAlbum('${browseId}')`;
+          if (item.resultType === 'artist') clickFn = `loadArtist('${browseId}')`;
+
+          html += `
+            <div class="card" onclick="${clickFn}">
+              <div class="card-img-wrapper">
+                <img src="${thumb}">
+                <div class="play-overlay"><div class="play-btn-circle"><i class="fa-solid fa-arrow-right"></i></div></div>
+              </div>
+              <div class="card-title">${title}</div>
+              <div class="card-subtitle">${subtitle}</div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    async function loadPlaylist(id) {
+      showLoader();
+      const playlist = await fetchAPI(`/api/playlist/${id}`);
+      if (!playlist) return;
+
+      let html = `
+        <div style="display: flex; gap: 24px; align-items: center; margin-bottom: 24px;">
+          <img src="${getThumb(playlist)}" style="width: 160px; height: 160px; border-radius: 8px; object-fit: cover;">
+          <div>
+            <h1 style="font-size: 2rem;">${playlist.title}</h1>
+            <p style="color: var(--text-sub); margin-top: 6px;">${playlist.trackCount || playlist.tracks?.length || 0} tracks</p>
+          </div>
+        </div>
+        <div class="track-list">
+      `;
+
+      playlistQueue = playlist.tracks || [];
+      playlist.tracks?.forEach((t, i) => {
+        const title = t.title;
+        const artist = t.artists ? t.artists.map(a => a.name).join(', ') : '';
+        const thumb = getThumb(t);
+
+        html += `
+          <div class="track-item" onclick="currentQueueIndex=${i}; playVideo('${t.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
+            <img class="track-thumb" src="${thumb}">
+            <div class="track-info">
+              <div class="track-name">${title}</div>
+              <div class="track-artist">${artist}</div>
+            </div>
+            <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(title)}')" title="Download MP3 via yt-dlp"><i class="fa-solid fa-download"></i></button>
+            <i class="fa-solid fa-play"></i>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    async function loadAlbum(id) {
+      showLoader();
+      const album = await fetchAPI(`/api/album/${id}`);
+      if (!album) return;
+
+      let html = `
+        <div style="display: flex; gap: 24px; align-items: center; margin-bottom: 24px;">
+          <img src="${getThumb(album)}" style="width: 160px; height: 160px; border-radius: 8px; object-fit: cover;">
+          <div>
+            <h1 style="font-size: 2rem;">${album.title}</h1>
+            <p style="color: var(--text-sub); margin-top: 6px;">${album.artists ? album.artists.map(a => a.name).join(', ') : ''} • ${album.year || ''}</p>
+          </div>
+        </div>
+        <div class="track-list">
+      `;
+
+      album.tracks?.forEach(t => {
+        const title = t.title;
+        const artist = t.artists ? t.artists.map(a => a.name).join(', ') : '';
+
+        html += `
+          <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${getThumb(album)}')">
+            <div class="track-info">
+              <div class="track-name">${title}</div>
+              <div class="track-artist">${artist}</div>
+            </div>
+            <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(title)}')" title="Download MP3 via yt-dlp"><i class="fa-solid fa-download"></i></button>
+            <i class="fa-solid fa-play"></i>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    async function loadArtist(id) {
+      showLoader();
+      const artist = await fetchAPI(`/api/artist/${id}`);
+      if (!artist) return;
+
+      let html = `
+        <div style="display: flex; gap: 24px; align-items: center; margin-bottom: 24px;">
+          <img src="${getThumb(artist)}" style="width: 160px; height: 160px; border-radius: 50%; object-fit: cover;">
+          <div>
+            <h1 style="font-size: 2.2rem;">${artist.name}</h1>
+            <p style="color: var(--text-sub); margin-top: 6px;">${artist.description || 'Artist'}</p>
+          </div>
+        </div>
+      `;
+
+      if (artist.songs?.results) {
+        html += `<h3 style="margin: 20px 0 10px 0; color: var(--text-sub);">Popular Tracks</h3><div class="track-list">`;
+        artist.songs.results.forEach(t => {
+          const title = t.title;
+          const thumb = getThumb(t);
+
+          html += `
+            <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(title)}', '${escapeStr(artist.name)}', '${thumb}')">
+              <img class="track-thumb" src="${thumb}">
+              <div class="track-info"><div class="track-name">${title}</div></div>
+              <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(title)}')" title="Download MP3 via yt-dlp"><i class="fa-solid fa-download"></i></button>
+              <i class="fa-solid fa-play"></i>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    async function loadExplore() {
+      showLoader();
+      const categories = await fetchAPI('/api/explore');
+      if (!categories) return;
+
+      let html = `<h2 class="section-title" style="margin-bottom: 20px;">Explore Moods & Genres</h2><div class="horizontal-shelf" style="flex-wrap: wrap;">`;
+      Object.keys(categories).forEach(genreKey => {
+        categories[genreKey].forEach(item => {
+          html += `
+            <div class="card" onclick="loadSearch('${escapeStr(item.title)}')">
+              <div class="card-title">${item.title}</div>
+            </div>
+          `;
+        });
+      });
+      html += `</div>`;
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    function getThumb(item) {
+      if (item.thumbnails && item.thumbnails.length > 0) {
+        return item.thumbnails[item.thumbnails.length - 1].url;
+      }
+      return 'https://via.placeholder.com/180';
+    }
+
+    function escapeStr(str) {
+      if (!str) return '';
+      return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function showLoader() {
+      document.getElementById('dynamic-content').innerHTML = '<div class="loader"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+    }
+
+    function handleSearchKey(e) {
+      if (e.key === 'Enter') loadSearch();
+    }
+
+    function setFilter(el, filter) {
+      document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      currentFilter = filter;
+      const searchVal = document.getElementById('search-input').value;
+      if (searchVal) loadSearch();
+    }
+
+    function nextSong() {
+      if (playlistQueue.length > currentQueueIndex + 1) {
+        currentQueueIndex++;
+        const t = playlistQueue[currentQueueIndex];
+        playVideo(t.videoId, t.title, t.artists ? t.artists.map(a => a.name).join(', ') : '', getThumb(t));
+      }
+    }
+
+    function prevSong() {
+      if (currentQueueIndex > 0) {
+        currentQueueIndex--;
+        const t = playlistQueue[currentQueueIndex];
+        playVideo(t.videoId, t.title, t.artists ? t.artists.map(a => a.name).join(', ') : '', getThumb(t));
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadHome);
+  </script>
+</body>
+</html>
