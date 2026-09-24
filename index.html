@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YT Music - Instant Caching & Playlists</title>
+  <title>YT Music - Custom Playlists & Instant Video Engine</title>
   <!-- Google Fonts & Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -50,7 +50,7 @@
       display: flex;
       flex-direction: column;
       padding: 20px 10px;
-      gap: 8px;
+      gap: 6px;
     }
 
     .brand {
@@ -85,12 +85,25 @@
       letter-spacing: 0.5px;
       padding: 10px 16px 4px 16px;
       font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .create-playlist-btn {
+      color: var(--accent-red);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: transform 0.2s;
+    }
+    .create-playlist-btn:hover {
+      transform: scale(1.2);
     }
 
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
       padding: 10px 16px;
       border-radius: 10px;
       color: var(--text-sub);
@@ -107,7 +120,7 @@
     }
 
     .nav-item i {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
 
     /* Main Content */
@@ -267,7 +280,7 @@
       align-items: center;
       justify-content: center;
       opacity: 0;
-      gap: 8px;
+      gap: 6px;
       transition: opacity 0.2s;
     }
 
@@ -276,8 +289,8 @@
     }
 
     .play-btn-circle {
-      width: 42px;
-      height: 42px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       background-color: var(--accent-red);
       color: #fff;
@@ -288,9 +301,9 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
 
-    .download-btn-circle, .fav-btn-circle {
-      width: 34px;
-      height: 34px;
+    .download-btn-circle, .fav-btn-circle, .add-pl-btn-circle {
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       background-color: rgba(255,255,255,0.25);
       backdrop-filter: blur(4px);
@@ -298,11 +311,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       transition: background 0.2s;
     }
 
-    .download-btn-circle:hover, .fav-btn-circle:hover {
+    .download-btn-circle:hover, .fav-btn-circle:hover, .add-pl-btn-circle:hover {
       background-color: #fff;
       color: #000;
     }
@@ -484,6 +497,7 @@
       transform: scale(0.95);
     }
 
+    /* Scrubber Bar & Animated White Knob */
     .progress-container {
       display: flex;
       align-items: center;
@@ -571,24 +585,40 @@
       width: 28%;
     }
 
+    /* Floating Video Window Header */
     #player-frame-container {
       position: fixed;
       bottom: 100px;
       right: 20px;
-      width: 320px;
-      height: 180px;
+      width: 360px;
+      height: 210px;
       background: #000;
       border-radius: 10px;
       overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.85);
       display: block;
       z-index: 99;
       border: 1px solid #333;
     }
 
+    .video-header {
+      background: #111;
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #aaa;
+      border-bottom: 1px solid #222;
+    }
+
+    .video-header i {
+      cursor: pointer;
+    }
+
     #yt-player {
       width: 100%;
-      height: 100%;
+      height: calc(100% - 28px);
     }
 
     .toggle-video-btn {
@@ -628,6 +658,68 @@
       color: var(--accent-red);
       font-size: 2rem;
     }
+
+    /* Modal dialog */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-card {
+      background: #181818;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 24px;
+      width: 360px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.8);
+    }
+
+    .modal-card h3 {
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
+
+    .modal-card input {
+      width: 100%;
+      padding: 10px;
+      background: #222;
+      border: 1px solid #444;
+      color: #fff;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .modal-btn.primary {
+      background: var(--accent-red);
+      color: #fff;
+    }
+    .modal-btn.cancel {
+      background: #333;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -638,17 +730,26 @@
       <div class="brand">
         <i class="fa-brands fa-youtube"></i>
         <span>YT Music</span>
-        <span class="status-badge" id="mode-badge">Cached</span>
+        <span class="status-badge" id="mode-badge">Fast Engine</span>
       </div>
 
       <div class="nav-item active" onclick="loadHome()"><i class="fa-solid fa-house"></i> Home</div>
       <div class="nav-item" onclick="loadCharts()"><i class="fa-solid fa-chart-line"></i> Charts</div>
       <div class="nav-item" onclick="loadExplore()"><i class="fa-solid fa-compass"></i> Explore</div>
 
-      <div class="nav-section-title">My Library</div>
+      <div class="nav-section-title">
+        <span>My Library</span>
+      </div>
       <div class="nav-item" onclick="loadRecentlyPlayed()"><i class="fa-solid fa-clock-rotate-left"></i> History</div>
       <div class="nav-item" onclick="loadFavorites()"><i class="fa-solid fa-heart"></i> Favorites</div>
-      <div class="nav-item" onclick="loadPlaylistsView()"><i class="fa-solid fa-list-ul"></i> Playlists</div>
+
+      <div class="nav-section-title">
+        <span>My Playlists</span>
+        <i class="fa-solid fa-plus create-playlist-btn" onclick="openCreatePlaylistModal()" title="Create New Playlist"></i>
+      </div>
+      <div id="sidebar-playlists-list">
+        <!-- Rendered custom playlists -->
+      </div>
     </div>
 
     <!-- Main Section -->
@@ -656,7 +757,7 @@
       <div class="top-bar">
         <div class="search-box">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="search-input" placeholder="Search millions of songs, artists, albums..." onkeypress="handleSearchKey(event)">
+          <input type="text" id="search-input" placeholder="Search songs, artists, playlists..." onkeypress="handleSearchKey(event)">
         </div>
         <div class="filter-chips">
           <div class="chip active" onclick="setFilter(this, 'all')">All</div>
@@ -673,10 +774,12 @@
     </div>
   </div>
 
-  <audio id="native-audio" style="display:none;"></audio>
-
-  <!-- YouTube Video Engine -->
+  <!-- YouTube Video Engine Window -->
   <div id="player-frame-container">
+    <div class="video-header">
+      <span><i class="fa-brands fa-youtube" style="color: var(--accent-red);"></i> YouTube Player Engine</span>
+      <i class="fa-solid fa-xmark" onclick="toggleVideoWindow()"></i>
+    </div>
     <div id="yt-player"></div>
   </div>
 
@@ -710,7 +813,32 @@
     <div class="player-right">
       <button class="action-btn" id="player-fav-btn" onclick="toggleCurrentFavorite()"><i class="fa-regular fa-heart"></i></button>
       <button class="download-bar-btn" onclick="downloadCurrentSong()"><i class="fa-solid fa-download"></i> Download MP3</button>
-      <button class="toggle-video-btn" onclick="toggleVideoWindow()"><i class="fa-solid fa-tv"></i> Player Window</button>
+      <button class="toggle-video-btn" onclick="toggleVideoWindow()"><i class="fa-solid fa-tv"></i> Video Window</button>
+    </div>
+  </div>
+
+  <!-- Create Playlist Modal -->
+  <div class="modal-overlay" id="create-playlist-modal">
+    <div class="modal-card">
+      <h3>Create New Playlist</h3>
+      <input type="text" id="new-playlist-name" placeholder="Playlist Name (e.g. My Favorites 2026)">
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeCreatePlaylistModal()">Cancel</button>
+        <button class="modal-btn primary" onclick="confirmCreatePlaylist()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add to Playlist Selector Modal -->
+  <div class="modal-overlay" id="add-to-playlist-modal">
+    <div class="modal-card">
+      <h3>Add Track to Playlist</h3>
+      <div id="playlist-options-list" style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+        <!-- Rendered custom playlists choices -->
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeAddToPlaylistModal()">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -726,17 +854,18 @@
     let player = null;
     let isPlaying = false;
     let currentVideoId = 'xLR3SaA0xTY';
-    let currentSongObj = null;
+    let currentSongObj = { videoId: 'xLR3SaA0xTY', title: 'Viva La Vida', artist: 'Coldplay', thumb: 'https://i.ytimg.com/vi/xLR3SaA0xTY/hqdefault.jpg' };
+    let pendingTrackToAdd = null;
     let playlistQueue = [];
     let currentQueueIndex = -1;
     let progressTimer = null;
 
-    // Instant Caching Storage & Library
+    // Local Storage Data Structures
     const API_CACHE = JSON.parse(localStorage.getItem('YT_API_CACHE') || '{}');
     let RECENTLY_PLAYED = JSON.parse(localStorage.getItem('YT_RECENTLY_PLAYED') || '[]');
     let MY_FAVORITES = JSON.parse(localStorage.getItem('YT_MY_FAVORITES') || '[]');
+    let CUSTOM_PLAYLISTS = JSON.parse(localStorage.getItem('YT_CUSTOM_PLAYLISTS') || '[]');
 
-    const audio = document.getElementById('native-audio');
     const seekBar = document.getElementById('seek-bar');
     const currTime = document.getElementById('curr-time');
     const durTime = document.getElementById('dur-time');
@@ -757,13 +886,11 @@
       ]
     };
 
-    // Cached API Fetcher for 0ms Load Times
+    // Fast API Cache
     async function fetchAPI(endpoint) {
       if (API_CACHE[endpoint]) {
         const cached = API_CACHE[endpoint];
-        if (Date.now() - cached.timestamp < 60 * 60 * 1000) {
-          return cached.data;
-        }
+        if (Date.now() - cached.timestamp < 60 * 60 * 1000) return cached.data;
       }
 
       try {
@@ -780,6 +907,7 @@
       return null;
     }
 
+    // YouTube Official Engine
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('yt-player', {
         height: '100%',
@@ -830,20 +958,14 @@
             currTime.innerText = formatTime(curr);
             durTime.innerText = formatTime(dur);
           }
-        } else if (audio && audio.duration) {
-          seekBar.value = (audio.currentTime / audio.duration) * 100;
-          currTime.innerText = formatTime(audio.currentTime);
-          durTime.innerText = formatTime(audio.duration);
         }
-      }, 350);
+      }, 300);
     }
 
     function onSeekInput(val) {
       if (player && player.seekTo && player.getDuration) {
         const dur = player.getDuration();
         if (dur > 0) player.seekTo((val / 100) * dur, true);
-      } else if (audio && audio.duration) {
-        audio.currentTime = (val / 100) * audio.duration;
       }
     }
 
@@ -854,7 +976,8 @@
       return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
-    async function playVideo(videoId, title, artist, thumb) {
+    // Instant Song Playback using YouTube IFrame API (0.5s playback!)
+    function playVideo(videoId, title, artist, thumb) {
       if (!videoId) return;
       currentVideoId = videoId;
       currentSongObj = { videoId, title, artist, thumb };
@@ -867,43 +990,18 @@
       document.getElementById('current-artist').innerText = artist || 'YT Music';
       if (thumb) document.getElementById('current-thumb').src = thumb;
 
-      try {
-        const streamData = await fetchAPI(`/api/stream/${videoId}`);
-        if (streamData && streamData.stream_url) {
-          audio.src = `${API_BASE}${streamData.stream_url}`;
-          audio.play().then(() => {
-            setLoadingState(false);
-            isPlaying = true;
-            document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
-          }).catch(() => fallbackIframePlay(videoId));
-          return;
-        }
-      } catch(e) {}
-
-      fallbackIframePlay(videoId);
-    }
-
-    function fallbackIframePlay(videoId) {
       if (player && player.loadVideoById) {
         player.loadVideoById(videoId);
       }
     }
 
     function togglePlay() {
-      if (audio && audio.src && !audio.paused) {
-        audio.pause();
-        isPlaying = false;
-        document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-play"></i>';
-        return;
-      }
-
-      if (player && player.getPlayerState) {
-        const state = player.getPlayerState();
-        if (state === YT.PlayerState.PLAYING) {
-          player.pauseVideo();
-        } else {
-          player.playVideo();
-        }
+      if (!player || !player.getPlayerState) return;
+      const state = player.getPlayerState();
+      if (state === YT.PlayerState.PLAYING) {
+        player.pauseVideo();
+      } else {
+        player.playVideo();
       }
     }
 
@@ -919,7 +1017,7 @@
       else alert("Select a song to download!");
     }
 
-    // Recently Played & Favorites Tracking
+    // Library & Favorites
     function trackPlayedSong(song) {
       RECENTLY_PLAYED = RECENTLY_PLAYED.filter(s => s.videoId !== song.videoId);
       RECENTLY_PLAYED.unshift(song);
@@ -929,19 +1027,14 @@
 
     function toggleFavorite(song) {
       const idx = MY_FAVORITES.findIndex(s => s.videoId === song.videoId);
-      if (idx >= 0) {
-        MY_FAVORITES.splice(idx, 1);
-      } else {
-        MY_FAVORITES.unshift(song);
-      }
+      if (idx >= 0) MY_FAVORITES.splice(idx, 1);
+      else MY_FAVORITES.unshift(song);
       try { localStorage.setItem('YT_MY_FAVORITES', JSON.stringify(MY_FAVORITES)); } catch(e){}
       updateFavoriteUI();
     }
 
     function toggleCurrentFavorite() {
-      if (currentSongObj) {
-        toggleFavorite(currentSongObj);
-      }
+      if (currentSongObj) toggleFavorite(currentSongObj);
     }
 
     function isFavorite(videoId) {
@@ -959,15 +1052,155 @@
       }
     }
 
+    // Custom Playlists System
+    function openCreatePlaylistModal() {
+      document.getElementById('create-playlist-modal').style.display = 'flex';
+      document.getElementById('new-playlist-name').focus();
+    }
+
+    function closeCreatePlaylistModal() {
+      document.getElementById('create-playlist-modal').style.display = 'none';
+      document.getElementById('new-playlist-name').value = '';
+    }
+
+    function confirmCreatePlaylist() {
+      const name = document.getElementById('new-playlist-name').value.trim();
+      if (!name) return;
+      const newPl = { id: 'pl_' + Date.now(), name, tracks: [] };
+      CUSTOM_PLAYLISTS.push(newPl);
+      try { localStorage.setItem('YT_CUSTOM_PLAYLISTS', JSON.stringify(CUSTOM_PLAYLISTS)); } catch(e){}
+      closeCreatePlaylistModal();
+      renderSidebarPlaylists();
+    }
+
+    function renderSidebarPlaylists() {
+      const container = document.getElementById('sidebar-playlists-list');
+      if (!container) return;
+      if (CUSTOM_PLAYLISTS.length === 0) {
+        container.innerHTML = `<div style="font-size: 0.8rem; color: #666; padding: 4px 16px;">No custom playlists yet</div>`;
+        return;
+      }
+
+      let html = '';
+      CUSTOM_PLAYLISTS.forEach(pl => {
+        html += `
+          <div class="nav-item" onclick="loadCustomPlaylist('${pl.id}')">
+            <i class="fa-solid fa-music"></i>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${pl.name}</span>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function openAddToPlaylistModal(song) {
+      pendingTrackToAdd = song;
+      const modal = document.getElementById('add-to-playlist-modal');
+      const list = document.getElementById('playlist-options-list');
+
+      if (CUSTOM_PLAYLISTS.length === 0) {
+        list.innerHTML = `
+          <p style="font-size: 0.85rem; color: #aaa;">You have no custom playlists yet.</p>
+          <button class="modal-btn primary" style="margin-top: 8px;" onclick="closeAddToPlaylistModal(); openCreatePlaylistModal();">+ Create Playlist</button>
+        `;
+      } else {
+        let html = '';
+        CUSTOM_PLAYLISTS.forEach(pl => {
+          html += `
+            <div style="padding: 10px; background: #222; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="addPendingTrackToPlaylist('${pl.id}')">
+              <span><i class="fa-solid fa-music"></i> ${pl.name}</span>
+              <span style="font-size: 0.75rem; color: #888;">${pl.tracks.length} tracks</span>
+            </div>
+          `;
+        });
+        list.innerHTML = html;
+      }
+      modal.style.display = 'flex';
+    }
+
+    function closeAddToPlaylistModal() {
+      document.getElementById('add-to-playlist-modal').style.display = 'none';
+      pendingTrackToAdd = null;
+    }
+
+    function addPendingTrackToPlaylist(playlistId) {
+      if (!pendingTrackToAdd) return;
+      const pl = CUSTOM_PLAYLISTS.find(p => p.id === playlistId);
+      if (pl) {
+        if (!pl.tracks.some(t => t.videoId === pendingTrackToAdd.videoId)) {
+          pl.tracks.push(pendingTrackToAdd);
+          try { localStorage.setItem('YT_CUSTOM_PLAYLISTS', JSON.stringify(CUSTOM_PLAYLISTS)); } catch(e){}
+          alert(`Added "${pendingTrackToAdd.title}" to ${pl.name}!`);
+        } else {
+          alert(`Track already in ${pl.name}!`);
+        }
+      }
+      closeAddToPlaylistModal();
+    }
+
+    function loadCustomPlaylist(id) {
+      const pl = CUSTOM_PLAYLISTS.find(p => p.id === id);
+      if (!pl) return;
+      showLoader();
+      let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h2 class="section-title"><i class="fa-solid fa-music" style="color: var(--accent-red);"></i> ${pl.name}</h2>
+            <p style="color: var(--text-sub); margin-top: 4px;">${pl.tracks.length} tracks in custom playlist</p>
+          </div>
+          <button class="modal-btn cancel" onclick="deleteCustomPlaylist('${pl.id}')" style="background: rgba(255,0,0,0.2); color: #ff5555;"><i class="fa-solid fa-trash"></i> Delete Playlist</button>
+        </div>
+      `;
+
+      if (pl.tracks.length === 0) {
+        html += `<p style="color: var(--text-sub); margin-top: 20px;">This playlist is empty. Add songs by clicking the <strong>+</strong> button on any track card!</p>`;
+      } else {
+        html += `<div class="track-list">`;
+        pl.tracks.forEach(t => {
+          const isFav = isFavorite(t.videoId);
+          html += `
+            <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(t.title)}', '${escapeStr(t.artist)}', '${t.thumb}')">
+              <img class="track-thumb" src="${t.thumb}">
+              <div class="track-info"><div class="track-name">${t.title}</div><div class="track-artist">${t.artist}</div></div>
+              <button class="action-btn" onclick="event.stopPropagation(); removeTrackFromPlaylist('${pl.id}', '${t.videoId}')" title="Remove Track"><i class="fa-solid fa-xmark"></i></button>
+              <button class="action-btn ${isFav ? 'fav-active' : ''}" onclick="event.stopPropagation(); toggleFavorite({videoId:'${t.videoId}'}); loadCustomPlaylist('${pl.id}');"><i class="fa-solid fa-heart"></i></button>
+              <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(t.title)}')"><i class="fa-solid fa-download"></i></button>
+              <i class="fa-solid fa-play" style="color: #fff;"></i>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+      document.getElementById('dynamic-content').innerHTML = html;
+    }
+
+    function removeTrackFromPlaylist(playlistId, videoId) {
+      const pl = CUSTOM_PLAYLISTS.find(p => p.id === playlistId);
+      if (pl) {
+        pl.tracks = pl.tracks.filter(t => t.videoId !== videoId);
+        try { localStorage.setItem('YT_CUSTOM_PLAYLISTS', JSON.stringify(CUSTOM_PLAYLISTS)); } catch(e){}
+        loadCustomPlaylist(playlistId);
+      }
+    }
+
+    function deleteCustomPlaylist(playlistId) {
+      if (confirm("Are you sure you want to delete this playlist?")) {
+        CUSTOM_PLAYLISTS = CUSTOM_PLAYLISTS.filter(p => p.id !== playlistId);
+        try { localStorage.setItem('YT_CUSTOM_PLAYLISTS', JSON.stringify(CUSTOM_PLAYLISTS)); } catch(e){}
+        renderSidebarPlaylists();
+        loadHome();
+      }
+    }
+
     function toggleVideoWindow() {
       const frame = document.getElementById('player-frame-container');
       frame.style.display = (frame.style.display === 'none') ? 'block' : 'none';
     }
 
-    // Views
+    // Main Navigation Views
     async function loadHome() {
       showLoader();
-      setActiveNav(0);
+      renderSidebarPlaylists();
       const homeData = await fetchAPI('/api/home');
       if (homeData) {
         renderServerHome(homeData);
@@ -1007,6 +1240,7 @@
                 <img src="${thumb}" loading="lazy">
                 <div class="play-overlay">
                   <div class="play-btn-circle"><i class="fa-solid fa-play"></i></div>
+                  ${videoId ? `<div class="add-pl-btn-circle" onclick="event.stopPropagation(); openAddToPlaylistModal({videoId:'${videoId}', title:'${escapeStr(title)}', artist:'${escapeStr(subtitle)}', thumb:'${thumb}'})"><i class="fa-solid fa-plus"></i></div>` : ''}
                   ${videoId ? `<div class="download-btn-circle" onclick="event.stopPropagation(); downloadTrack('${videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></div>` : ''}
                 </div>
               </div>
@@ -1035,6 +1269,7 @@
             <img src="${item.thumb}" loading="lazy">
             <div class="play-overlay">
               <div class="play-btn-circle"><i class="fa-solid fa-play"></i></div>
+              <div class="add-pl-btn-circle" onclick="event.stopPropagation(); openAddToPlaylistModal({videoId:'${item.videoId}', title:'${escapeStr(item.title)}', artist:'${escapeStr(item.artist)}', thumb:'${item.thumb}'})"><i class="fa-solid fa-plus"></i></div>
               <div class="fav-btn-circle ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite({videoId:'${item.videoId}', title:'${escapeStr(item.title)}', artist:'${escapeStr(item.artist)}', thumb:'${item.thumb}'}); loadHome();"><i class="fa-solid fa-heart"></i></div>
               <div class="download-btn-circle" onclick="event.stopPropagation(); downloadTrack('${item.videoId}', '${escapeStr(item.title)}')"><i class="fa-solid fa-download"></i></div>
             </div>
@@ -1047,7 +1282,6 @@
 
     async function loadCharts() {
       showLoader();
-      setActiveNav(1);
       const charts = await fetchAPI('/api/charts');
       if (charts) {
         const songs = charts.videos?.items || charts.songs?.items || [];
@@ -1061,6 +1295,7 @@
             <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
               <img class="track-thumb" src="${thumb}">
               <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
+              <button class="action-btn" onclick="event.stopPropagation(); openAddToPlaylistModal({videoId:'${t.videoId}', title:'${escapeStr(title)}', artist:'${escapeStr(artist)}', thumb:'${thumb}'})" title="Add to Playlist"><i class="fa-solid fa-plus"></i></button>
               <button class="action-btn ${isFav ? 'fav-active' : ''}" onclick="event.stopPropagation(); toggleFavorite({videoId:'${t.videoId}', title:'${escapeStr(title)}', artist:'${escapeStr(artist)}', thumb:'${thumb}'}); loadCharts();"><i class="fa-solid fa-heart"></i></button>
               <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
               <i class="fa-solid fa-circle-play" style="font-size: 1.4rem; color: var(--accent-red);"></i>
@@ -1090,6 +1325,7 @@
               <div class="track-item" onclick="playVideo('${item.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
                 <img class="track-thumb" src="${thumb}">
                 <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
+                <button class="action-btn" onclick="event.stopPropagation(); openAddToPlaylistModal({videoId:'${item.videoId}', title:'${escapeStr(title)}', artist:'${escapeStr(artist)}', thumb:'${thumb}'})" title="Add to Playlist"><i class="fa-solid fa-plus"></i></button>
                 <button class="action-btn ${isFav ? 'fav-active' : ''}" onclick="event.stopPropagation(); toggleFavorite({videoId:'${item.videoId}', title:'${escapeStr(title)}', artist:'${escapeStr(artist)}', thumb:'${thumb}'}); loadSearch('${escapeStr(q)}');"><i class="fa-solid fa-heart"></i></button>
                 <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${item.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
                 <i class="fa-solid fa-play" style="color: #fff;"></i>
@@ -1103,7 +1339,6 @@
     }
 
     function loadExplore() {
-      setActiveNav(2);
       let html = `<h2 class="section-title" style="margin-bottom: 20px;">Explore Moods & Genres</h2><div class="horizontal-shelf" style="flex-wrap: wrap;">`;
       const genres = ['Pop Hits', 'Rock Classics', 'Hip Hop', 'R&B & Soul', 'EDM & Dance', 'Acoustic Chill', 'Top Charts 2026', 'Latin Hits'];
       genres.forEach(g => {
@@ -1114,7 +1349,6 @@
     }
 
     function loadRecentlyPlayed() {
-      setActiveNav(3);
       if (RECENTLY_PLAYED.length === 0) {
         document.getElementById('dynamic-content').innerHTML = `<h2 class="section-title">History</h2><p style="color: var(--text-sub); margin-top: 15px;">No recently played songs yet. Start playing tracks to see your history!</p>`;
         return;
@@ -1127,7 +1361,8 @@
           <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(t.title)}', '${escapeStr(t.artist)}', '${t.thumb}')">
             <img class="track-thumb" src="${t.thumb}">
             <div class="track-info"><div class="track-name">${t.title}</div><div class="track-artist">${t.artist}</div></div>
-            <button class="action-btn ${isFav ? 'fav-active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${t.videoId}'); loadRecentlyPlayed();"><i class="fa-solid fa-heart"></i></button>
+            <button class="action-btn" onclick="event.stopPropagation(); openAddToPlaylistModal({videoId:'${t.videoId}', title:'${escapeStr(t.title)}', artist:'${escapeStr(t.artist)}', thumb:'${t.thumb}'})"><i class="fa-solid fa-plus"></i></button>
+            <button class="action-btn ${isFav ? 'fav-active' : ''}" onclick="event.stopPropagation(); toggleFavorite({videoId:'${t.videoId}'}); loadRecentlyPlayed();"><i class="fa-solid fa-heart"></i></button>
             <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(t.title)}')"><i class="fa-solid fa-download"></i></button>
             <i class="fa-solid fa-play" style="color: #fff;"></i>
           </div>
@@ -1138,7 +1373,6 @@
     }
 
     function loadFavorites() {
-      setActiveNav(4);
       if (MY_FAVORITES.length === 0) {
         document.getElementById('dynamic-content').innerHTML = `<h2 class="section-title">Favorites</h2><p style="color: var(--text-sub); margin-top: 15px;">No favorite tracks added yet. Click the heart icon on any song to save it here!</p>`;
         return;
@@ -1150,6 +1384,7 @@
           <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(t.title)}', '${escapeStr(t.artist)}', '${t.thumb}')">
             <img class="track-thumb" src="${t.thumb}">
             <div class="track-info"><div class="track-name">${t.title}</div><div class="track-artist">${t.artist}</div></div>
+            <button class="action-btn" onclick="event.stopPropagation(); openAddToPlaylistModal({videoId:'${t.videoId}', title:'${escapeStr(t.title)}', artist:'${escapeStr(t.artist)}', thumb:'${t.thumb}'})"><i class="fa-solid fa-plus"></i></button>
             <button class="action-btn fav-active" onclick="event.stopPropagation(); toggleFavorite({videoId:'${t.videoId}'}); loadFavorites();"><i class="fa-solid fa-heart"></i></button>
             <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(t.title)}')"><i class="fa-solid fa-download"></i></button>
             <i class="fa-solid fa-play" style="color: #fff;"></i>
@@ -1158,32 +1393,6 @@
       });
       html += `</div>`;
       document.getElementById('dynamic-content').innerHTML = html;
-    }
-
-    function loadPlaylistsView() {
-      setActiveNav(5);
-      let html = `<h2 class="section-title" style="margin-bottom: 20px;">Popular Playlists</h2><div class="horizontal-shelf" style="flex-wrap: wrap;">`;
-      const playlists = [
-        { id: 'VLRDCLAK5uy_mwrn2QlMTGaTnHg45Gut1T6treNoLC6x4', title: 'Viva La Vida Playlist', subtitle: 'Top Rock' },
-        { id: 'VLRDCLAK5uy_k54Zr5UY8lb-LJx1XLj0q4rH355y9dJV8', title: "'00s Rock Chillout", subtitle: 'Acoustic & Rock' }
-      ];
-      playlists.forEach(p => {
-        html += `
-          <div class="card" onclick="loadSearch('${p.title}')">
-            <div class="card-title">${p.title}</div>
-            <div class="card-subtitle">${p.subtitle}</div>
-          </div>
-        `;
-      });
-      html += `</div>`;
-      document.getElementById('dynamic-content').innerHTML = html;
-    }
-
-    function setActiveNav(idx) {
-      document.querySelectorAll('.sidebar .nav-item').forEach((el, i) => {
-        if (i === idx) el.classList.add('active');
-        else el.classList.remove('active');
-      });
     }
 
     function getThumb(item) {
