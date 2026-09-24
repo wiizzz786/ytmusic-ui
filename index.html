@@ -911,6 +911,21 @@
       return null;
     }
 
+    // Loading State Manager with 3-second safety timeout
+    let loadingTimeoutTimer = null;
+    function setLoadingState(loading) {
+      if (loadingTimeoutTimer) clearTimeout(loadingTimeoutTimer);
+      if (loading) {
+        progressContainer.classList.add('is-loading');
+        // Safeguard: Never allow loading spinner to persist longer than 3 seconds
+        loadingTimeoutTimer = setTimeout(() => {
+          progressContainer.classList.remove('is-loading');
+        }, 3000);
+      } else {
+        progressContainer.classList.remove('is-loading');
+      }
+    }
+
     // Audio Event Handlers
     audio.addEventListener('waiting', () => setLoadingState(true));
     audio.addEventListener('playing', () => {
@@ -930,13 +945,21 @@
       document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-play"></i>';
       if (playlistQueue.length > currentQueueIndex + 1) nextSong();
     });
+    audio.addEventListener('error', (e) => {
+      console.warn("Native audio error / Google CDN token issue, falling back to YouTube Player Engine:", e);
+      audio.removeAttribute('src');
+      setLoadingState(false);
+      if (currentVideoId) {
+        fallbackIframePlay(currentVideoId);
+      }
+    });
 
     // YouTube IFrame Engine Initialization
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('yt-player', {
         height: '100%',
         width: '100%',
-        videoId: currentVideoId,
+        videoId: currentVideoId || 'xLR3SaA0xTY',
         playerVars: { 'autoplay': 1, 'controls': 1 },
         events: {
           'onStateChange': onPlayerStateChange
@@ -963,22 +986,14 @@
       }
     }
 
-    function setLoadingState(loading) {
-      if (loading) {
-        progressContainer.classList.add('is-loading');
-      } else {
-        progressContainer.classList.remove('is-loading');
-      }
-    }
-
     function startProgressLoop() {
       if (progressTimer) clearInterval(progressTimer);
       progressTimer = setInterval(() => {
-        if (audio && audio.duration) {
+        if (audio && audio.src && audio.duration && !isNaN(audio.duration)) {
           seekBar.value = (audio.currentTime / audio.duration) * 100;
           currTime.innerText = formatTime(audio.currentTime);
           durTime.innerText = formatTime(audio.duration);
-        } else if (player && player.getCurrentTime && player.getDuration) {
+        } else if (player && typeof player.getCurrentTime === 'function' && typeof player.getDuration === 'function') {
           const curr = player.getCurrentTime() || 0;
           const dur = player.getDuration() || 0;
           if (dur > 0) {
@@ -991,9 +1006,9 @@
     }
 
     function onSeekInput(val) {
-      if (audio && audio.duration) {
+      if (audio && audio.src && audio.duration && !isNaN(audio.duration)) {
         audio.currentTime = (val / 100) * audio.duration;
-      } else if (player && player.seekTo && player.getDuration) {
+      } else if (player && typeof player.seekTo === 'function' && typeof player.getDuration === 'function') {
         const dur = player.getDuration();
         if (dur > 0) player.seekTo((val / 100) * dur, true);
       }
@@ -1006,7 +1021,21 @@
       return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
-    // Direct High-Speed Streaming via yt-dlp direct audio URL (0.2s load time!)
+    function fallbackIframePlay(videoId) {
+      if (player && typeof player.loadVideoById === 'function') {
+        try {
+          player.loadVideoById(videoId);
+          isPlaying = true;
+          document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+          startProgressLoop();
+        } catch(e) {
+          console.error("Iframe loadVideoById error:", e);
+        }
+      }
+      setTimeout(() => setLoadingState(false), 800);
+    }
+
+    // High-Speed Playback with Direct Stream & YouTube Engine Fallback
     async function playVideo(videoId, title, artist, thumb) {
       if (!videoId) return;
       currentVideoId = videoId;
@@ -1020,51 +1049,55 @@
       document.getElementById('current-artist').innerText = artist || 'YT Music';
       if (thumb) document.getElementById('current-thumb').src = thumb;
 
-      // Extract direct high-speed audio stream URL from yt-dlp backend
+      // Extract direct audio stream URL from yt-dlp backend
       try {
-        const res = await fetch(`${API_BASE}/api/stream/${videoId}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const res = await fetch(`${API_BASE}/api/stream/${videoId}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
         const data = await res.json();
+        
         if (data.status === 'success' && data.stream_url) {
           audio.src = data.stream_url;
-          audio.play().then(() => {
-            setLoadingState(false);
-            isPlaying = true;
-            document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
-            if (player && player.cueVideoById) player.cueVideoById(videoId);
-          }).catch(err => {
-            console.error("Direct audio play catch:", err);
-            fallbackIframePlay(videoId);
-          });
-          return;
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              setLoadingState(false);
+              isPlaying = true;
+              document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+              if (player && typeof player.cueVideoById === 'function') player.cueVideoById(videoId);
+            }).catch(err => {
+              console.warn("Direct play rejected, falling back to YouTube engine:", err);
+              fallbackIframePlay(videoId);
+            });
+            return;
+          }
         }
       } catch(e) {
-        console.error("Stream extraction error:", e);
+        console.warn("Stream extraction timeout/error, falling back to YouTube engine:", e);
       }
 
       fallbackIframePlay(videoId);
     }
 
-    function fallbackIframePlay(videoId) {
-      if (player && player.loadVideoById) {
-        player.loadVideoById(videoId);
-      }
-    }
-
     function togglePlay() {
-      if (audio && audio.src) {
+      if (audio && audio.src && audio.src !== window.location.href && !audio.ended && audio.readyState >= 2) {
         if (!audio.paused) {
           audio.pause();
           isPlaying = false;
           document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-play"></i>';
         } else {
-          audio.play();
-          isPlaying = true;
-          document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+          audio.play().then(() => {
+            isPlaying = true;
+            document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+          }).catch(() => {
+            if (currentVideoId) fallbackIframePlay(currentVideoId);
+          });
         }
         return;
       }
 
-      if (player && player.getPlayerState) {
+      if (player && typeof player.getPlayerState === 'function') {
         const state = player.getPlayerState();
         if (state === YT.PlayerState.PLAYING) {
           player.pauseVideo();
@@ -1074,7 +1107,7 @@
       }
     }
 
-    // Direct High-Speed Download using yt-dlp extracted stream URL (No y2mate redirects!)
+    // Direct Audio Download using yt-dlp backend (No third-party y2mate redirects!)
     async function downloadTrack(videoId, title) {
       if (!videoId) return;
       setLoadingState(true);
@@ -1098,7 +1131,7 @@
       }
 
       window.open(`${API_BASE}/api/download/${videoId}`, '_blank');
-      setTimeout(() => setLoadingState(false), 1500);
+      setTimeout(() => setLoadingState(false), 1200);
     }
 
     function downloadCurrentSong() {
