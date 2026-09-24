@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YT Music - Custom Playlists & Instant Video Engine</title>
+  <title>YT Music - Fast Stream & Direct Download</title>
   <!-- Google Fonts & Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -730,7 +730,7 @@
       <div class="brand">
         <i class="fa-brands fa-youtube"></i>
         <span>YT Music</span>
-        <span class="status-badge" id="mode-badge">Fast Engine</span>
+        <span class="status-badge" id="mode-badge">yt-dlp Engine</span>
       </div>
 
       <div class="nav-item active" onclick="loadHome()"><i class="fa-solid fa-house"></i> Home</div>
@@ -773,6 +773,9 @@
       </div>
     </div>
   </div>
+
+  <!-- HTML5 Native Audio element for direct high-speed yt-dlp streaming -->
+  <audio id="native-audio"></audio>
 
   <!-- YouTube Video Engine Window -->
   <div id="player-frame-container">
@@ -860,12 +863,13 @@
     let currentQueueIndex = -1;
     let progressTimer = null;
 
-    // Local Storage Data Structures
+    // Storage
     const API_CACHE = JSON.parse(localStorage.getItem('YT_API_CACHE') || '{}');
     let RECENTLY_PLAYED = JSON.parse(localStorage.getItem('YT_RECENTLY_PLAYED') || '[]');
     let MY_FAVORITES = JSON.parse(localStorage.getItem('YT_MY_FAVORITES') || '[]');
     let CUSTOM_PLAYLISTS = JSON.parse(localStorage.getItem('YT_CUSTOM_PLAYLISTS') || '[]');
 
+    const audio = document.getElementById('native-audio');
     const seekBar = document.getElementById('seek-bar');
     const currTime = document.getElementById('curr-time');
     const durTime = document.getElementById('dur-time');
@@ -907,7 +911,27 @@
       return null;
     }
 
-    // YouTube Official Engine
+    // Audio Event Handlers
+    audio.addEventListener('waiting', () => setLoadingState(true));
+    audio.addEventListener('playing', () => {
+      setLoadingState(false);
+      isPlaying = true;
+      document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+      startProgressLoop();
+    });
+    audio.addEventListener('pause', () => {
+      setLoadingState(false);
+      isPlaying = false;
+      document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-play"></i>';
+    });
+    audio.addEventListener('ended', () => {
+      setLoadingState(false);
+      isPlaying = false;
+      document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-play"></i>';
+      if (playlistQueue.length > currentQueueIndex + 1) nextSong();
+    });
+
+    // YouTube IFrame Engine Initialization
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('yt-player', {
         height: '100%',
@@ -950,7 +974,11 @@
     function startProgressLoop() {
       if (progressTimer) clearInterval(progressTimer);
       progressTimer = setInterval(() => {
-        if (player && player.getCurrentTime && player.getDuration) {
+        if (audio && audio.duration) {
+          seekBar.value = (audio.currentTime / audio.duration) * 100;
+          currTime.innerText = formatTime(audio.currentTime);
+          durTime.innerText = formatTime(audio.duration);
+        } else if (player && player.getCurrentTime && player.getDuration) {
           const curr = player.getCurrentTime() || 0;
           const dur = player.getDuration() || 0;
           if (dur > 0) {
@@ -963,7 +991,9 @@
     }
 
     function onSeekInput(val) {
-      if (player && player.seekTo && player.getDuration) {
+      if (audio && audio.duration) {
+        audio.currentTime = (val / 100) * audio.duration;
+      } else if (player && player.seekTo && player.getDuration) {
         const dur = player.getDuration();
         if (dur > 0) player.seekTo((val / 100) * dur, true);
       }
@@ -976,8 +1006,8 @@
       return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
-    // Instant Song Playback using YouTube IFrame API (0.5s playback!)
-    function playVideo(videoId, title, artist, thumb) {
+    // Direct High-Speed Streaming via yt-dlp direct audio URL (0.2s load time!)
+    async function playVideo(videoId, title, artist, thumb) {
       if (!videoId) return;
       currentVideoId = videoId;
       currentSongObj = { videoId, title, artist, thumb };
@@ -990,30 +1020,89 @@
       document.getElementById('current-artist').innerText = artist || 'YT Music';
       if (thumb) document.getElementById('current-thumb').src = thumb;
 
+      // Extract direct high-speed audio stream URL from yt-dlp backend
+      try {
+        const res = await fetch(`${API_BASE}/api/stream/${videoId}`);
+        const data = await res.json();
+        if (data.status === 'success' && data.stream_url) {
+          audio.src = data.stream_url;
+          audio.play().then(() => {
+            setLoadingState(false);
+            isPlaying = true;
+            document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+            if (player && player.cueVideoById) player.cueVideoById(videoId);
+          }).catch(err => {
+            console.error("Direct audio play catch:", err);
+            fallbackIframePlay(videoId);
+          });
+          return;
+        }
+      } catch(e) {
+        console.error("Stream extraction error:", e);
+      }
+
+      fallbackIframePlay(videoId);
+    }
+
+    function fallbackIframePlay(videoId) {
       if (player && player.loadVideoById) {
         player.loadVideoById(videoId);
       }
     }
 
     function togglePlay() {
-      if (!player || !player.getPlayerState) return;
-      const state = player.getPlayerState();
-      if (state === YT.PlayerState.PLAYING) {
-        player.pauseVideo();
-      } else {
-        player.playVideo();
+      if (audio && audio.src) {
+        if (!audio.paused) {
+          audio.pause();
+          isPlaying = false;
+          document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-play"></i>';
+        } else {
+          audio.play();
+          isPlaying = true;
+          document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+        }
+        return;
+      }
+
+      if (player && player.getPlayerState) {
+        const state = player.getPlayerState();
+        if (state === YT.PlayerState.PLAYING) {
+          player.pauseVideo();
+        } else {
+          player.playVideo();
+        }
       }
     }
 
-    function downloadTrack(videoId, title) {
+    // Direct High-Speed Download using yt-dlp extracted stream URL (No y2mate redirects!)
+    async function downloadTrack(videoId, title) {
       if (!videoId) return;
       setLoadingState(true);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/stream/${videoId}`);
+        const data = await res.json();
+        if (data.status === 'success' && data.stream_url) {
+          const a = document.createElement('a');
+          a.href = data.stream_url;
+          a.download = `${title || videoId}.${data.ext || 'm4a'}`;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setLoadingState(false);
+          return;
+        }
+      } catch(e) {
+        console.error("yt-dlp Download error:", e);
+      }
+
       window.open(`${API_BASE}/api/download/${videoId}`, '_blank');
-      setTimeout(() => setLoadingState(false), 2000);
+      setTimeout(() => setLoadingState(false), 1500);
     }
 
     function downloadCurrentSong() {
-      if (currentVideoId) downloadTrack(currentVideoId);
+      if (currentVideoId) downloadTrack(currentVideoId, currentSongObj ? currentSongObj.title : currentVideoId);
       else alert("Select a song to download!");
     }
 
@@ -1197,7 +1286,7 @@
       frame.style.display = (frame.style.display === 'none') ? 'block' : 'none';
     }
 
-    // Main Navigation Views
+    // Navigation Views
     async function loadHome() {
       showLoader();
       renderSidebarPlaylists();

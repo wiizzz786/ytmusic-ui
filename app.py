@@ -14,8 +14,7 @@ from flask import (
     send_from_directory,
     send_file,
     redirect,
-    Response,
-    stream_with_context
+    Response
 )
 from flask_cors import CORS
 from ytmusicapi import YTMusic
@@ -47,9 +46,8 @@ def serve_index():
 
 @app.route('/api/home', methods=['GET'])
 def get_home():
-    """Fetch ALL home feed recommendations and shelves."""
+    """Fetch home feed recommendations and shelves."""
     try:
-        # Fetch all available home shelves without capping
         home_data = ytmusic.get_home(limit=None)
         return jsonify({"status": "success", "data": home_data})
     except Exception:
@@ -66,14 +64,13 @@ def get_home():
 
 @app.route('/api/search', methods=['GET'])
 def search():
-    """Search ALL available songs, albums, artists, or playlists."""
+    """Search songs, albums, artists, or playlists."""
     query = request.args.get('q', 'trending').strip()
     filter_type = request.args.get('filter', None)
     if filter_type == 'all':
         filter_type = None
 
     try:
-        # Fetch unlimited search results
         results = ytmusic.search(query, filter=filter_type, limit=None)
         return jsonify({"status": "success", "query": query, "data": results})
     except Exception as err:
@@ -93,7 +90,7 @@ def get_charts():
 
 @app.route('/api/playlist/<path:playlist_id>', methods=['GET'])
 def get_playlist(playlist_id):
-    """Fetch ALL playlist tracks and metadata."""
+    """Fetch playlist tracklist and metadata."""
     try:
         playlist = ytmusic.get_playlist(playlist_id, limit=None)
         return jsonify({"status": "success", "data": playlist})
@@ -103,7 +100,7 @@ def get_playlist(playlist_id):
 
 @app.route('/api/album/<path:album_id>', methods=['GET'])
 def get_album(album_id):
-    """Fetch all album tracks and metadata."""
+    """Fetch album tracks and metadata."""
     try:
         album = ytmusic.get_album(album_id)
         return jsonify({"status": "success", "data": album})
@@ -133,7 +130,7 @@ def get_explore():
 
 @app.route('/api/stream/<video_id>', methods=['GET'])
 def stream_audio_info(video_id):
-    """Fetch stream info for a track."""
+    """Extract direct high-speed audio stream URL via yt-dlp."""
     try:
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -143,84 +140,41 @@ def stream_audio_info(video_id):
         url = f"https://www.youtube.com/watch?v={video_id}"
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+            stream_url = info.get('url')
+            title = info.get('title', 'Track')
+            duration = info.get('duration', 0)
+            ext = info.get('ext', 'm4a')
             return jsonify({
                 "status": "success",
-                "stream_url": f"/api/play/{video_id}",
-                "title": info.get('title', 'Track'),
-                "duration": info.get('duration', 0),
+                "stream_url": stream_url,
+                "title": title,
+                "duration": duration,
+                "ext": ext,
                 "video_id": video_id
             })
     except Exception as err:
         return jsonify({"status": "error", "message": str(err)}), 500
 
 
-@app.route('/api/play/<video_id>', methods=['GET'])
-def play_proxy(video_id):
-    """Proxy audio bytes directly to bypass CORS and 403 Forbidden errors."""
-    try:
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'quiet': True,
-            'no_warnings': True
-        }
-        url = f"https://www.youtube.com/watch?v={video_id}"
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            stream_url = info.get('url')
-
-        req_headers = {'User-Agent': 'Mozilla/5.0'}
-        if 'Range' in request.headers:
-            req_headers['Range'] = request.headers['Range']
-
-        res = requests.get(stream_url, headers=req_headers, stream=True, timeout=10)
-
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [
-            (name, value) for (name, value) in res.raw.headers.items()
-            if name.lower() not in excluded_headers
-        ]
-
-        return Response(
-            stream_with_context(res.iter_content(chunk_size=1024 * 64)),
-            status=res.status_code,
-            headers=headers
-        )
-    except Exception as err:
-        return jsonify({"status": "error", "message": str(err)}), 500
-
-
 @app.route('/api/download/<video_id>', methods=['GET'])
 def download_audio(video_id):
-    """Download audio track as file attachment."""
-    if os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'):
-        return redirect(f"https://y2mate.nu/en/v1/?url=https://www.youtube.com/watch?v={video_id}")
-
+    """Extract direct audio download URL via yt-dlp."""
     try:
-        url = f"https://www.youtube.com/watch?v={video_id}"
         ydl_opts = {
             'format': 'bestaudio/best',
             'quiet': True,
             'no_warnings': True
         }
+        url = f"https://www.youtube.com/watch?v={video_id}"
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             stream_url = info.get('url')
-            title = info.get('title', video_id)
-            ext = info.get('ext', 'webm')
-
-        req = requests.get(stream_url, stream=True, headers={'User-Agent': 'Mozilla/5.0'}, timeout=15)
-        clean_title = sanitize_filename(title)
-        filename = f"{clean_title}.{ext}" if clean_title else f"{video_id}.{ext}"
-
-        response = Response(
-            stream_with_context(req.iter_content(chunk_size=1024 * 64)),
-            content_type=req.headers.get('Content-Type', 'audio/webm')
-        )
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-
-    except Exception:
-        return redirect(f"https://y2mate.nu/en/v1/?url=https://www.youtube.com/watch?v={video_id}")
+            if stream_url:
+                return redirect(stream_url)
+            
+        return jsonify({"status": "error", "message": "Stream URL not found"}), 404
+    except Exception as err:
+        return jsonify({"status": "error", "message": str(err)}), 500
 
 
 if __name__ == '__main__':
