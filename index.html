@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YT Music - Unlimited Songs</title>
+  <title>YT Music</title>
   <!-- Google Fonts & Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -44,7 +44,7 @@
 
     /* Sidebar */
     .sidebar {
-      width: 240px;
+      width: 230px;
       background-color: var(--bg-sidebar);
       border-right: 1px solid var(--border-color);
       display: flex;
@@ -57,7 +57,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 0 10px 15px 10px;
+      padding: 0 10px 20px 10px;
       font-size: 1.3rem;
       font-weight: 700;
       color: #fff;
@@ -76,33 +76,6 @@
       border-radius: 10px;
       border: 1px solid var(--accent-red);
       margin-left: auto;
-      cursor: pointer;
-    }
-
-    .server-url-bar {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 10px;
-      background: rgba(255,255,255,0.04);
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-
-    .server-url-bar label {
-      font-size: 0.75rem;
-      color: var(--text-sub);
-    }
-
-    .server-url-bar input {
-      background: #222;
-      border: 1px solid #333;
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      width: 100%;
-      outline: none;
     }
 
     .nav-item {
@@ -493,6 +466,7 @@
       transform: scale(0.95);
     }
 
+    /* Scrubber Bar & Animated White Knob */
     .progress-container {
       display: flex;
       align-items: center;
@@ -580,6 +554,7 @@
       width: 28%;
     }
 
+    /* Floating Video Window */
     #player-frame-container {
       position: fixed;
       bottom: 100px;
@@ -647,12 +622,7 @@
       <div class="brand">
         <i class="fa-brands fa-youtube"></i>
         <span>YT Music</span>
-        <span class="status-badge" id="mode-badge">Auto</span>
-      </div>
-
-      <div class="server-url-bar">
-        <label for="vercel-url-input">Vercel Backend URL:</label>
-        <input type="text" id="vercel-url-input" placeholder="https://ytmusic-ui.vercel.app" onchange="updateBackendURL(this.value)">
+        <span class="status-badge" id="mode-badge">Vercel</span>
       </div>
 
       <div class="nav-item active" onclick="loadHome()"><i class="fa-solid fa-house"></i> Home</div>
@@ -726,14 +696,14 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
-    // Smart API Base Resolver: Auto-detects Vercel deployment URL, custom input URL, or origin
-    let API_BASE = localStorage.getItem('VERCEL_BACKEND_URL') || (
-      (window.location.protocol === 'file:') 
-        ? 'http://127.0.0.1:5000' 
-        : window.location.origin
-    );
+    // Hardcoded Vercel Backend URL
+    const HARDCODED_VERCEL_BACKEND = 'https://ytmusic-ui.vercel.app';
+    
+    const API_BASE = (window.location.hostname.includes('vercel.app')) 
+      ? window.location.origin 
+      : HARDCODED_VERCEL_BACKEND;
 
-    let serverActive = false;
+    let serverActive = true;
     let currentFilter = 'all';
     let player = null;
     let isPlaying = false;
@@ -762,17 +732,6 @@
         { videoId: 'L_LUpnjgPso', title: 'Ride', artist: 'Twenty One Pilots', thumb: 'https://i.ytimg.com/vi/L_LUpnjgPso/hqdefault.jpg' }
       ]
     };
-
-    function updateBackendURL(val) {
-      if (val && val.trim()) {
-        let cleanVal = val.trim();
-        if (!cleanVal.startsWith('http')) cleanVal = 'https://' + cleanVal;
-        cleanVal = cleanVal.replace(/\/$/, '');
-        API_BASE = cleanVal;
-        localStorage.setItem('VERCEL_BACKEND_URL', cleanVal);
-        loadHome();
-      }
-    }
 
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('yt-player', {
@@ -857,21 +816,19 @@
       document.getElementById('current-artist').innerText = artist || 'YT Music';
       if (thumb) document.getElementById('current-thumb').src = thumb;
 
-      if (serverActive) {
-        try {
-          const res = await fetch(`${API_BASE}/api/stream/${videoId}`);
-          const data = await res.json();
-          if (data.status === 'success' && data.stream_url) {
-            audio.src = `${API_BASE}${data.stream_url}`;
-            audio.play().then(() => {
-              setLoadingState(false);
-              isPlaying = true;
-              document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
-            }).catch(() => fallbackIframePlay(videoId));
-            return;
-          }
-        } catch(e) {}
-      }
+      try {
+        const res = await fetch(`${API_BASE}/api/stream/${videoId}`);
+        const data = await res.json();
+        if (data.status === 'success' && data.stream_url) {
+          audio.src = `${API_BASE}${data.stream_url}`;
+          audio.play().then(() => {
+            setLoadingState(false);
+            isPlaying = true;
+            document.getElementById('play-pause-btn').innerHTML = '<i class="fa-solid fa-pause"></i>';
+          }).catch(() => fallbackIframePlay(videoId));
+          return;
+        }
+      } catch(e) {}
 
       fallbackIframePlay(videoId);
     }
@@ -903,15 +860,8 @@
     function downloadTrack(videoId, title) {
       if (!videoId) return;
       setLoadingState(true);
-
-      if (serverActive) {
-        window.open(`${API_BASE}/api/download/${videoId}`, '_blank');
-        setTimeout(() => setLoadingState(false), 2000);
-      } else {
-        const downloadUrl = `https://y2mate.nu/en/v1/?url=https://www.youtube.com/watch?v=${videoId}`;
-        window.open(downloadUrl, '_blank');
-        setTimeout(() => setLoadingState(false), 1500);
-      }
+      window.open(`${API_BASE}/api/download/${videoId}`, '_blank');
+      setTimeout(() => setLoadingState(false), 2000);
     }
 
     function downloadCurrentSong() {
@@ -924,40 +874,16 @@
       frame.style.display = (frame.style.display === 'none') ? 'block' : 'none';
     }
 
-    async function checkServer() {
-      try {
-        const res = await fetch(`${API_BASE}/api/home`, { method: 'GET' });
-        if (res.ok) {
-          serverActive = true;
-          document.getElementById('mode-badge').innerText = 'Vercel / Online';
-        } else {
-          throw new Error('Not ok');
-        }
-      } catch(e) {
-        serverActive = false;
-        document.getElementById('mode-badge').innerText = 'Set Vercel URL';
-      }
-    }
-
     async function loadHome() {
       showLoader();
-      const vercelInput = document.getElementById('vercel-url-input');
-      if (vercelInput && localStorage.getItem('VERCEL_BACKEND_URL')) {
-        vercelInput.value = localStorage.getItem('VERCEL_BACKEND_URL');
-      }
-
-      await checkServer();
-
-      if (serverActive) {
-        try {
-          const res = await fetch(`${API_BASE}/api/home`);
-          const data = await res.json();
-          if (data.status === 'success' && data.data) {
-            renderServerHome(data.data);
-            return;
-          }
-        } catch(e) {}
-      }
+      try {
+        const res = await fetch(`${API_BASE}/api/home`);
+        const data = await res.json();
+        if (data.status === 'success' && data.data) {
+          renderServerHome(data.data);
+          return;
+        }
+      } catch(e) {}
 
       renderCuratedHome();
     }
@@ -1001,10 +927,6 @@
 
     function renderCuratedHome() {
       let html = `
-        <div style="background: rgba(255,0,0,0.1); border: 1px solid var(--accent-red); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-          <h3 style="color: var(--accent-red); margin-bottom: 6px;">Connect to Vercel Backend to Access ALL YouTube Music Songs!</h3>
-          <p style="font-size: 0.9rem; color: #ccc;">Enter your Vercel deployment URL in the sidebar box (e.g. <code>https://your-project.vercel.app</code>) to fetch millions of live tracks directly from the Vercel Python API!</p>
-        </div>
         <div class="section-header"><h2 class="section-title">Featured Picks (${CURATED_DATA.quickPicks.length} tracks)</h2></div>
         <div class="horizontal-shelf">
       `;
@@ -1050,32 +972,30 @@
 
     async function loadCharts() {
       showLoader();
-      if (serverActive) {
-        try {
-          const res = await fetch(`${API_BASE}/api/charts`);
-          const data = await res.json();
-          if (data.status === 'success') {
-            const songs = data.data.videos?.items || data.data.songs?.items || [];
-            let html = `<h2 class="section-title" style="margin-bottom: 20px;">Top Charts (${songs.length} Tracks)</h2><div class="track-list">`;
-            songs.forEach(t => {
-              const title = t.title;
-              const artist = t.artists ? t.artists.map(a => a.name).join(', ') : 'Artist';
-              const thumb = getThumb(t);
-              html += `
-                <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
-                  <img class="track-thumb" src="${thumb}">
-                  <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
-                  <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
-                  <i class="fa-solid fa-circle-play" style="font-size: 1.4rem; color: var(--accent-red);"></i>
-                </div>
-              `;
-            });
-            html += `</div>`;
-            document.getElementById('dynamic-content').innerHTML = html;
-            return;
-          }
-        } catch(e) {}
-      }
+      try {
+        const res = await fetch(`${API_BASE}/api/charts`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          const songs = data.data.videos?.items || data.data.songs?.items || [];
+          let html = `<h2 class="section-title" style="margin-bottom: 20px;">Top Charts (${songs.length} Tracks)</h2><div class="track-list">`;
+          songs.forEach(t => {
+            const title = t.title;
+            const artist = t.artists ? t.artists.map(a => a.name).join(', ') : 'Artist';
+            const thumb = getThumb(t);
+            html += `
+              <div class="track-item" onclick="playVideo('${t.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
+                <img class="track-thumb" src="${thumb}">
+                <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
+                <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${t.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
+                <i class="fa-solid fa-circle-play" style="font-size: 1.4rem; color: var(--accent-red);"></i>
+              </div>
+            `;
+          });
+          html += `</div>`;
+          document.getElementById('dynamic-content').innerHTML = html;
+          return;
+        }
+      } catch(e) {}
 
       loadCategory('Top Charts', CURATED_DATA.quickPicks);
     }
@@ -1086,33 +1006,31 @@
 
       showLoader();
 
-      if (serverActive) {
-        try {
-          const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`);
-          const data = await res.json();
-          if (data.status === 'success' && data.data) {
-            let html = `<h2 class="section-title" style="margin-bottom: 20px;">All Results for "${q}" (${data.data.length} items)</h2><div class="track-list">`;
-            data.data.forEach(item => {
-              if (item.videoId) {
-                const title = item.title;
-                const artist = item.artists ? item.artists.map(a => a.name).join(', ') : (item.author || '');
-                const thumb = getThumb(item);
-                html += `
-                  <div class="track-item" onclick="playVideo('${item.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
-                    <img class="track-thumb" src="${thumb}">
-                    <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
-                    <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${item.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
-                    <i class="fa-solid fa-play" style="color: #fff;"></i>
-                  </div>
-                `;
-              }
-            });
-            html += `</div>`;
-            document.getElementById('dynamic-content').innerHTML = html;
-            return;
-          }
-        } catch(e) {}
-      }
+      try {
+        const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`);
+        const data = await res.json();
+        if (data.status === 'success' && data.data) {
+          let html = `<h2 class="section-title" style="margin-bottom: 20px;">All Results for "${q}" (${data.data.length} items)</h2><div class="track-list">`;
+          data.data.forEach(item => {
+            if (item.videoId) {
+              const title = item.title;
+              const artist = item.artists ? item.artists.map(a => a.name).join(', ') : (item.author || '');
+              const thumb = getThumb(item);
+              html += `
+                <div class="track-item" onclick="playVideo('${item.videoId}', '${escapeStr(title)}', '${escapeStr(artist)}', '${thumb}')">
+                  <img class="track-thumb" src="${thumb}">
+                  <div class="track-info"><div class="track-name">${title}</div><div class="track-artist">${artist}</div></div>
+                  <button class="action-btn" onclick="event.stopPropagation(); downloadTrack('${item.videoId}', '${escapeStr(title)}')"><i class="fa-solid fa-download"></i></button>
+                  <i class="fa-solid fa-play" style="color: #fff;"></i>
+                </div>
+              `;
+            }
+          });
+          html += `</div>`;
+          document.getElementById('dynamic-content').innerHTML = html;
+          return;
+        }
+      } catch(e) {}
 
       loadCategory(`Search for "${q}"`, CURATED_DATA.quickPicks);
     }
